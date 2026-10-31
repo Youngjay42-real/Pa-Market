@@ -103,7 +103,7 @@ def register_seed_command(app) -> None:
         """Create the configured first admin without seeding demo market data."""
         phone_value = app.config.get("ADMIN_BOOTSTRAP_PHONE", "").strip()
         name_value = app.config.get("ADMIN_BOOTSTRAP_NAME", "").strip()
-        password_value = app.config.get("ADMIN_BOOTSTRAP_PASSWORD", "")
+        password_value = app.config.get("ADMIN_PASSWORD", "")
 
         if not any((phone_value, name_value, password_value)):
             click.echo("Admin bootstrap is not configured; skipped.")
@@ -111,7 +111,7 @@ def register_seed_command(app) -> None:
         if not all((phone_value, name_value, password_value)):
             raise click.ClickException(
                 "Set ADMIN_BOOTSTRAP_PHONE, ADMIN_BOOTSTRAP_NAME, and "
-                "ADMIN_BOOTSTRAP_PASSWORD together."
+                "ADMIN_PASSWORD together."
             )
 
         from ..errors import ApiError

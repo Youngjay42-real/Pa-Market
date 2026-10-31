@@ -54,7 +54,7 @@ services:
         value: "0776596009"
       - key: ADMIN_BOOTSTRAP_NAME
         value: "Council Administrator"
-      - key: ADMIN_BOOTSTRAP_PASSWORD
+      - key: ADMIN_PASSWORD
         sync: false
       # ── Market Assistant (chatbot) ──
       # Empty CHATBOT_DATABASE_URL = chat tables live in the same Neon database.

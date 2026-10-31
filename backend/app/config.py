@@ -101,7 +101,7 @@ class BaseConfig:
     # only through the backend's private environment; the CLI never logs it.
     ADMIN_BOOTSTRAP_PHONE = os.environ.get("ADMIN_BOOTSTRAP_PHONE", "")
     ADMIN_BOOTSTRAP_NAME = os.environ.get("ADMIN_BOOTSTRAP_NAME", "")
-    ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
     # When True (tests), do not hit the network or leaked-error pages.
     TESTING = False

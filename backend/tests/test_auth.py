@@ -92,7 +92,7 @@ def test_bootstrap_admin_creates_account_and_is_idempotent(app, client):
     app.config.update(
         ADMIN_BOOTSTRAP_PHONE="0776596009",
         ADMIN_BOOTSTRAP_NAME="Pa Market Administrator",
-        ADMIN_BOOTSTRAP_PASSWORD=password,
+        ADMIN_PASSWORD=password,
     )
     runner = app.test_cli_runner()
 
@@ -140,7 +140,7 @@ def test_bootstrap_admin_fails_for_existing_vendor_phone(app):
     app.config.update(
         ADMIN_BOOTSTRAP_PHONE="0776596009",
         ADMIN_BOOTSTRAP_NAME="Pa Market Administrator",
-        ADMIN_BOOTSTRAP_PASSWORD="render-generated-secret-987",
+        ADMIN_PASSWORD="render-generated-secret-987",
     )
     result = app.test_cli_runner().invoke(args=["bootstrap-admin"])
     assert result.exit_code != 0
@@ -165,7 +165,7 @@ def test_bootstrap_admin_updates_existing_admin_password_from_env(app, client):
     app.config.update(
         ADMIN_BOOTSTRAP_PHONE="0776596009",
         ADMIN_BOOTSTRAP_NAME="Council Administrator",
-        ADMIN_BOOTSTRAP_PASSWORD=password,
+        ADMIN_PASSWORD=password,
     )
     result = app.test_cli_runner().invoke(args=["bootstrap-admin"])
     assert result.exit_code == 0, result.output
