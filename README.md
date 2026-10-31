@@ -1,6 +1,6 @@
-# StandProof frontend
+# Pa Market
 
-A redesigned market allocation workspace for Lusaka City Market, built with Next.js 14, React 18, TypeScript and CSS Modules. StandProof follows an application through review, a stand offer, acceptance, two-party handover and backend-controlled payment eligibility.
+A market allocation workspace for Lusaka City Market, built with Next.js 14, React 18, TypeScript and CSS Modules. Pa Market follows an application through review, a stand offer, acceptance, two-party handover and backend-controlled payment eligibility.
 
 ## Run locally
 
@@ -24,7 +24,13 @@ Choose **Sign in**, then **Open vendor demo** or **Open administrator demo**. Re
 
 The market explorer has 120 fictional stands in the existing Produce, Textiles, Hardware and Food Court zones. Search, category/zone/status filters, stand selection, zoom, allocation queue and stand details work. Administrative review and allocation require explicit confirmation. Vendor and official handover confirmations update the same sample records and audit trail.
 
+The interactive **Market stand map** is available at `/map`. In the demonstration it shows fictional stands; on Render it displays backend inventory and remains empty until real stand records are added. Demo stands are not seeded into production.
+
 **This is a labelled frontend demonstration.** It does not process DevDraft payments, authenticate real users, issue valid trading permits, deliver reports to officials or call an AI provider. A demo payment request stays pending; the browser never manufactures successful payment confirmation. Real API failures never silently become demonstration data.
+
+## Render administrator
+
+The Render Blueprint provisions the initial administrator with phone number `0776596009` and a Render-generated password. Find the `ADMIN_BOOTSTRAP_PASSWORD` secret in the backend service's Render environment settings and sign in at `/login`; the password is never committed or printed by the bootstrap command. Set all three `ADMIN_BOOTSTRAP_*` values together if you need a different administrator. Provisioning is idempotent and does not add demo vendors or stands.
 
 ## Routes
 

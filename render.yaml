@@ -12,7 +12,7 @@ services:
     rootDir: backend
     plan: free
     buildCommand: python -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -r requirements.txt && FLASK_APP=wsgi.py .venv/bin/flask db upgrade
-    startCommand: .venv/bin/gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    startCommand: FLASK_APP=wsgi.py .venv/bin/flask bootstrap-admin && .venv/bin/gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
@@ -48,6 +48,14 @@ services:
         value: "5.00"
       - key: ALLOW_DEMO_SEED
         value: "false"
+      # A single admin account is provisioned without demo vendors or stands.
+      # Render generates and stores the initial password as a private secret.
+      - key: ADMIN_BOOTSTRAP_PHONE
+        value: "0776596009"
+      - key: ADMIN_BOOTSTRAP_NAME
+        value: "Council Administrator"
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        generateValue: true
       # ── Market Assistant (chatbot) ──
       # Empty CHATBOT_DATABASE_URL = chat tables live in the same Neon database.
       - key: CHATBOT_DATABASE_URL

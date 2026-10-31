@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * StandProof Market Assistant — floating chat widget.
+ * Pa Market Assistant — floating chat widget.
  *
  * Visual interface (frontend-lead refinable) driven entirely by the chatbot API
  * contract: docs/CHATBOT_CONTRACT.md. No business logic lives in this file.
@@ -90,7 +90,7 @@ export function ChatWidget() {
   }
 
   return (
-    <section className={styles.panel} role="dialog" aria-label="StandProof Market Assistant" aria-modal="false">
+    <section className={styles.panel} role="dialog" aria-label="Pa Market Assistant" aria-modal="false">
       <header className={styles.header}>
         <span className={styles.headerIcon} aria-hidden="true">
           <AssistantIcon />

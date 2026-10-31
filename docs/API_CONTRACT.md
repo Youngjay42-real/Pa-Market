@@ -21,8 +21,8 @@ Common error codes: `unauthorized` (401), `forbidden` (403), `not_found` (404),
 
 JWT bearer tokens (`Authorization: Bearer <token>`). Tokens carry `role`
 claims (`vendor` | `admin`). Vendors self-register; **admin accounts are
-provisioned server-side only** (`flask seed-demo` or backend lead) — there is
-no admin signup code.
+provisioned server-side only** (`flask bootstrap-admin`, local `flask seed-demo`,
+or backend lead) — there is no admin signup code.
 
 | Method | Path       | Body                                        | Response (200/201)                                                              |
 | ------ | ---------- | ------------------------------------------- | ------------------------------------------------------------------------------- |

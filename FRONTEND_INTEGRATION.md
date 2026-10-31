@@ -1,4 +1,4 @@
-# StandProof frontend integration handoff
+# Pa Market frontend integration handoff
 
 The redesigned frontend is at the repository root. It preserves Next.js 14, React 18, TypeScript, CSS Modules and the existing QR library. Its service boundary is `src/lib/standproof/`; view models are in `src/types/standproof.ts`.
 

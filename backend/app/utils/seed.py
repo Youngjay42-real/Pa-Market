@@ -98,6 +98,65 @@ def _ensure_stands() -> None:
 
 
 def register_seed_command(app) -> None:
+    @app.cli.command("bootstrap-admin")
+    def bootstrap_admin() -> None:
+        """Create the configured first admin without seeding demo market data."""
+        phone_value = app.config.get("ADMIN_BOOTSTRAP_PHONE", "").strip()
+        name_value = app.config.get("ADMIN_BOOTSTRAP_NAME", "").strip()
+        password_value = app.config.get("ADMIN_BOOTSTRAP_PASSWORD", "")
+
+        if not any((phone_value, name_value, password_value)):
+            click.echo("Admin bootstrap is not configured; skipped.")
+            return
+        if not all((phone_value, name_value, password_value)):
+            raise click.ClickException(
+                "Set ADMIN_BOOTSTRAP_PHONE, ADMIN_BOOTSTRAP_NAME, and "
+                "ADMIN_BOOTSTRAP_PASSWORD together."
+            )
+
+        from ..errors import ApiError
+        from ..models import User
+        from ..services.auth_service import hash_password
+        from ..utils.validation import clean_text, normalize_phone, password_strength
+
+        try:
+            phone = normalize_phone(phone_value)
+            full_name = clean_text(name_value, 120, "full_name")
+            password = password_strength(password_value)
+        except ApiError as error:
+            raise click.ClickException(error.message) from error
+
+        existing = db.session.query(User).filter_by(phone=phone).one_or_none()
+        if existing:
+            if existing.role == "admin":
+                click.echo("Configured admin already exists; no changes made.")
+            else:
+                raise click.ClickException(
+                    "The configured admin phone is already used by a "
+                    "non-admin account. Set ADMIN_BOOTSTRAP_PHONE to an "
+                    "unused phone number."
+                )
+            return
+
+        user = User(
+            phone=phone,
+            full_name=full_name or "Council Administrator",
+            password_hash=hash_password(password),
+            role="admin",
+        )
+        db.session.add(user)
+        db.session.flush()
+        AuditService.record(
+            "ADMIN_BOOTSTRAPPED",
+            actor="system",
+            actor_role="system",
+            entity_type="user",
+            entity_id=user.id,
+            details="Initial council administrator created from private deployment configuration.",
+        )
+        db.session.commit()
+        click.echo("Initial council administrator created.")
+
     @app.cli.command("seed-demo")
     @click.option("--admin-phone", default="0776596009", show_default=True)
     @click.option("--admin-password", default="admin12345", show_default=True)

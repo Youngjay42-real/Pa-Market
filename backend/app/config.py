@@ -46,7 +46,7 @@ def _store_uri() -> str:
 class BaseConfig:
     """Default configuration shared by every environment."""
 
-    APP_NAME = "PaMarket"
+    APP_NAME = "Pa Market"
     API_PREFIX = "/api/v1"
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-insecure-secret-change-me")
@@ -96,6 +96,12 @@ class BaseConfig:
 
     # Optional demo seeding (disabled in production unless explicitly enabled.)
     ALLOW_DEMO_SEED = os.environ.get("ALLOW_DEMO_SEED", "true").lower() in ("1", "true", "yes")
+
+    # First council admin for a deployed environment. The password is provided
+    # only through the backend's private environment; the CLI never logs it.
+    ADMIN_BOOTSTRAP_PHONE = os.environ.get("ADMIN_BOOTSTRAP_PHONE", "")
+    ADMIN_BOOTSTRAP_NAME = os.environ.get("ADMIN_BOOTSTRAP_NAME", "")
+    ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "")
 
     # When True (tests), do not hit the network or leaked-error pages.
     TESTING = False

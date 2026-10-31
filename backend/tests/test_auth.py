@@ -85,3 +85,63 @@ def test_normalizes_260_prefix(client):
         },
     )
     assert response.status_code == 201
+
+
+def test_bootstrap_admin_creates_account_and_is_idempotent(app, client):
+    password = "render-generated-secret-987"
+    app.config.update(
+        ADMIN_BOOTSTRAP_PHONE="0776596009",
+        ADMIN_BOOTSTRAP_NAME="Pa Market Administrator",
+        ADMIN_BOOTSTRAP_PASSWORD=password,
+    )
+    runner = app.test_cli_runner()
+
+    created = runner.invoke(args=["bootstrap-admin"])
+    assert created.exit_code == 0, created.output
+    assert password not in created.output
+
+    with app.app_context():
+        admin = db.session.query(User).filter_by(phone="0776596009").one()
+        original_hash = admin.password_hash
+        assert admin.role == "admin"
+        assert admin.full_name == "Pa Market Administrator"
+        assert original_hash != password
+
+    repeated = runner.invoke(args=["bootstrap-admin"])
+    assert repeated.exit_code == 0, repeated.output
+    assert "already exists" in repeated.output
+
+    with app.app_context():
+        admin = db.session.query(User).filter_by(phone="0776596009").one()
+        assert admin.password_hash == original_hash
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"phone": "0776596009", "password": password},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["user"]["role"] == "admin"
+
+
+def test_bootstrap_admin_fails_for_existing_vendor_phone(app):
+    from app.services.auth_service import hash_password
+
+    with app.app_context():
+        db.session.add(
+            User(
+                phone="0776596009",
+                full_name="Existing vendor",
+                password_hash=hash_password("vendorpass"),
+                role="vendor",
+            )
+        )
+        db.session.commit()
+
+    app.config.update(
+        ADMIN_BOOTSTRAP_PHONE="0776596009",
+        ADMIN_BOOTSTRAP_NAME="Pa Market Administrator",
+        ADMIN_BOOTSTRAP_PASSWORD="render-generated-secret-987",
+    )
+    result = app.test_cli_runner().invoke(args=["bootstrap-admin"])
+    assert result.exit_code != 0
+    assert "already used by a non-admin account" in result.output

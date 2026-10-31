@@ -6,7 +6,7 @@ import { Icon } from '@/components/workspace/ui';
 import s from './MarketAssistant.module.css';
 
 type Message={id:number;role:'user'|'assistant';text:string;source?:string};
-const welcome:Message={id:0,role:'assistant',text:'Hello. I can walk you through the StandProof demo. Choose a topic below to see the next step.',source:'Demo guide · Not AI-generated'};
+const welcome:Message={id:0,role:'assistant',text:'Hello. I can walk you through the Pa Market demo. Choose a topic below to see the next step.',source:'Demo guide · Not AI-generated'};
 export function MarketAssistant(){const {snapshot,mode}=useStandproof();const [open,setOpen]=useState(false);const [messages,setMessages]=useState<Message[]>([welcome]);const [input,setInput]=useState('');const [busy,setBusy]=useState(false);const timer=useRef<ReturnType<typeof setTimeout>>();const end=useRef<HTMLDivElement>(null);const inputRef=useRef<HTMLInputElement>(null);
  useEffect(()=>{setMessages([welcome]);setInput('');setBusy(false);clearTimeout(timer.current)},[snapshot.session?.id]);
  useEffect(()=>()=>clearTimeout(timer.current),[]);
