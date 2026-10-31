@@ -79,7 +79,7 @@ async function verify() {
   global.fetch = async (url, init) => { request = { url: String(url), init }; return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } }); };
   assert.deepEqual(await createApiClient({ baseUrl: "https://example.test/api/v1" }).request("/stands"), { ok: true });
   assert.equal(request.url, "https://example.test/api/v1/stands"); assert.equal(request.init.credentials, "include");
-  await assert.rejects(createApiClient({ baseUrl: "https://example.test" }).request("/legacy"), error => error instanceof ApiError && error.code === "INVALID_API_NAMESPACE");
+  await assert.rejects(createApiClient({ baseUrl: "https://example.test/api/v0" }).request("/stands"), error => error instanceof ApiError && error.code === "INVALID_API_NAMESPACE");
   await assert.rejects(createApiClient({ baseUrl: "https://example.test" }).request("//attacker.test/api/v1/stands"));
   global.fetch = async () => new Response(JSON.stringify({ message: "Permission denied" }), { status: 403, headers: { "Content-Type": "application/json" } });
   await assert.rejects(createApiClient({ baseUrl: "https://example.test" }).request("/api/v1/stands"), error => error.status === 403 && error.message === "Permission denied");

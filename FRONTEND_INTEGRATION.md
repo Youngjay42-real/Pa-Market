@@ -1,12 +1,12 @@
 # StandProof frontend integration handoff
 
-The redesigned frontend is at the repository root. It preserves Next.js 14, React 18, TypeScript, CSS Modules and the existing QR library. Its new service boundary is `src/lib/standproof/`; view models are in `src/types/standproof.ts`. No Flask, Prisma or existing Next.js API implementation is changed by this frontend service layer.
+The redesigned frontend is at the repository root. It preserves Next.js 14, React 18, TypeScript, CSS Modules and the existing QR library. Its service boundary is `src/lib/standproof/`; view models are in `src/types/standproof.ts`.
 
 ## Current integration status
 
-The core authentication, allocation and payment Flask adapter contract is still pending. The redesigned operational screens use an explicitly labelled browser demonstration and do not call legacy database, authentication, payment or allocation implementations. The repository already contains the chatbot engineer’s `docs/CHATBOT_CONTRACT.md`; its frontend client, hook, widget, backend and existing Next.js proxy remain preserved.
+The approved Flask adapter is implemented in `src/lib/standproof/flask.ts` and installed by the application shell when the backend URL is configured. It loads market stands publicly and fetches account-specific records after real sign-in. The chatbot continues to use its separate approved contract in `docs/CHATBOT_CONTRACT.md`.
 
-With `NEXT_PUBLIC_API_URL` absent, the service is in `demo` mode. `NEXT_PUBLIC_DEMO_MODE=true` explicitly selects demonstration mode even if an API URL exists. With an API URL configured and no approved adapter, mode is `unconfigured`: screens show an integration error and empty live records. A failed or missing real API must never silently fall back to sample records. These are public Next.js build-time environment variables; set them before `npm run build`.
+With `NEXT_PUBLIC_API_URL` absent, the service is in `demo` mode. `NEXT_PUBLIC_DEMO_MODE=true` explicitly selects demonstration mode even if an API URL exists. The API URL can be the Flask origin or end in `/api/v1`; all adapter requests use the approved `/api/v1` namespace. Backend failures show an error and empty live records rather than falling back to sample data. `NEXT_PUBLIC_*` variables are embedded when Next.js starts or builds, so restart the frontend after changing them.
 
 ## Demonstration behavior
 
@@ -20,11 +20,11 @@ With `NEXT_PUBLIC_API_URL` absent, the service is in `demo` mode. `NEXT_PUBLIC_D
 
 ## Connecting Flask
 
-`createApiClient()` in `src/lib/standproof/client.ts` provides a transport configured by `NEXT_PUBLIC_API_URL`. It supports JSON, request cancellation, timeout, typed errors, HTTP-only cookie sessions and an optional access-token callback. It accepts only paths in the `/api/v1/` namespace. It contains no hard-coded route map. An API URL can be an origin or include `/api/v1`.
+`createApiClient()` in `src/lib/standproof/client.ts` provides a transport configured by `NEXT_PUBLIC_API_URL`. It supports JSON, request cancellation, timeout, typed errors, HTTP-only cookie sessions and an optional access-token callback. An origin-only URL is normalized to `/api/v1`; an already versioned URL is preserved. Other URL path prefixes are rejected.
 
-The backend lead must approve endpoint paths, schemas, error formats and session/CSRF behavior first. Implement a `StandproofAdapter` against that approved contract, map wire records to the frontend view models, and call `configureStandproofAdapter(adapter)` once from the application provider. The adapter's `getSnapshot()` must load only records authorised for the current user. Do not send every vendor's personal information to a vendor browser and rely on UI filtering.
+The installed `StandproofAdapter` maps the approved auth, stands, applications, allocations, payments, notifications, audit and reports endpoints to the frontend view models. Its `getSnapshot()` uses backend role-scoped list endpoints; vendor personal records are not obtained from admin-wide endpoints. Live mode disables demo persona and reset actions.
 
-The adapter interface currently includes demo profile selection to keep preview controls separate from screens. The service boundary rejects `selectPersona`, `createDemoVendor` and `resetDemo` in live mode; a live adapter must use genuine authentication flows with the agreed backend contract. The frontend must hide demonstration controls in live mode. Registration and login request schemas are intentionally not guessed. Successful live logout clears all cached records immediately; failed snapshot refreshes clear stale records, and older refresh responses cannot overwrite newer ones.
+The adapter interface includes demo profile actions for preview mode, but the service boundary rejects `selectPersona`, `createDemoVendor` and `resetDemo` in live mode. Registration and login use the approved Flask auth routes from the auth screens. Successful live logout clears all cached records immediately; failed snapshot refreshes clear stale records, and older refresh responses cannot overwrite newer ones.
 
 Required backend capabilities, **not new agreed endpoints**:
 
@@ -52,4 +52,4 @@ The frontend-only commit omits the legacy Next.js API routes, Prisma schema, gen
 
 ## Existing chatbot integration
 
-`src/components/chatbot/AssistantSurface.tsx` selects the existing team-owned `ChatWidget` when `NEXT_PUBLIC_CHATBOT_ENABLED=true`; otherwise it renders the clearly labelled local demo guide. The existing `src/lib/chatbot.ts`, `src/lib/chatbotTypes.ts`, `src/hooks/useChatbot.ts`, widget and `next.config.mjs` Flask rewrite are retained. Configure the documented `FLASK_API_URL` same-origin proxy or `NEXT_PUBLIC_API_URL` origin. Chatbot request/response schemas follow `docs/CHATBOT_CONTRACT.md`, which this frontend change does not edit. Do not copy a browser demo persona into the live widget’s `app_user` identity source; personalised chat requires genuine backend authentication. No production chatbot call or backend test was run as part of this frontend-only commit.
+`src/components/chatbot/AssistantSurface.tsx` selects the Flask-backed `ChatWidget` when `NEXT_PUBLIC_CHATBOT_ENABLED=true` or `NEXT_PUBLIC_API_URL` is configured, unless demo mode is explicit or the chatbot is explicitly disabled. Otherwise it renders the clearly labelled local guide. `FLASK_API_URL` is the Flask origin used by the Next.js same-origin proxy; set the chatbot flag when using only that proxy. Locally, `backend/wsgi.py` loads only `backend/.env`, so put `CHATBOT_LLM_PROVIDER=nvidia_nim` and the secret `CHATBOT_LLM_API_KEY` there, then restart Flask. Never put the key in a `NEXT_PUBLIC_*` variable. Personalised chat requires real backend authentication; browser demo personas are not sent as verified identities.

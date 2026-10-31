@@ -13,7 +13,7 @@ export interface ApiClientOptions {
 
 /** Transport only. Paths and wire schemas must come from the backend owner. */
 export function createApiClient(options: ApiClientOptions = {}) {
-  const configured = (options.baseUrl ?? process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  const configured = (options.baseUrl ?? process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
   return {
     async request<T>(contractPath: string, init: RequestInit = {}): Promise<T> {
       if (!configured) throw new ApiError("The Flask API URL has not been configured.", 0, "API_NOT_CONFIGURED");
@@ -21,8 +21,16 @@ export function createApiClient(options: ApiClientOptions = {}) {
       try { base = new URL(configured); } catch { throw new ApiError("The Flask API URL must be an absolute HTTP or HTTPS URL.", 0, "INVALID_API_URL"); }
       if (base.protocol !== "https:" && base.protocol !== "http:") throw new ApiError("The Flask API URL must use HTTP or HTTPS.", 0, "INVALID_API_URL");
       if (!contractPath.startsWith("/") || contractPath.startsWith("//") || contractPath.includes("..") || /^[a-z]+:/i.test(contractPath)) throw new ApiError("Use a relative path from the approved API contract.", 0, "INVALID_CONTRACT_PATH");
-      const prefix = base.pathname.replace(/\/$/, "");
-      const path = prefix && contractPath.startsWith(`${prefix}/`) ? contractPath : `${prefix}${contractPath}`;
+      const configuredPrefix = base.pathname.replace(/\/+$/, "");
+      if (configuredPrefix && configuredPrefix !== "/api/v1") {
+        throw new ApiError("Set the Flask API URL to its origin or its /api/v1 base URL.", 0, "INVALID_API_NAMESPACE");
+      }
+      // Accept either https://flask.example or https://flask.example/api/v1,
+      // while keeping every request inside the approved versioned namespace.
+      const prefix = configuredPrefix || "/api/v1";
+      const path = contractPath === prefix || contractPath.startsWith(`${prefix}/`)
+        ? contractPath
+        : `${prefix}${contractPath}`;
       const url = new URL(path, base.origin);
       if (!url.pathname.startsWith("/api/v1/")) throw new ApiError("The approved Flask API must use the /api/v1 namespace.", 0, "INVALID_API_NAMESPACE");
       const controller = new AbortController();
