@@ -1,0 +1,85 @@
+# Render Blueprint — PaMarket (frontend + backend from one repo)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Database: Neon PostgreSQL (NOT created here — passed via DATABASE_URL env var)
+# Payments: DevDraft credentials via environment (never committed)
+
+services:
+  # ── Flask backend ─────────────────────────────────────────────────────────
+  - type: web
+    name: pamarket-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: |
+      python -m venv .venv
+      .venv/bin/pip install --upgrade pip
+      .venv/bin/pip install -r requirements.txt
+      # provision/upgrade the Neon schema before serving traffic
+      .venv/bin/flask db upgrade
+    startCommand: .venv/bin/gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: FLASK_ENV
+        value: production
+      # Neon pooled connection string (set via dashboard, not committed here)
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_ORIGINS
+        value: "https://pamarket-frontend.onrender.com,http://localhost:3000"
+      # ── DevDraft ──
+      - key: DEVDRAFT_MODE
+        value: "test" # sandbox | test | live
+      - key: DEVDRAFT_CLIENT_KEY
+        sync: false
+      - key: DEVDRAFT_CLIENT_SECRET
+        sync: false
+      - key: DEVDRAFT_WEBHOOK_SECRET
+        sync: false
+      - key: DEVDRAFT_WEBHOOK_URL
+        value: "https://pamarket-backend.onrender.com/api/v1/payments/webhook/devdraft"
+      # ── Hackathon money-safety limits (server-enforced) ──
+      - key: PAYMENT_MAX_PER_TRANSACTION
+        value: "5.00"
+      - key: PAYMENT_MAX_TEAM_TOTAL
+        value: "50.00"
+      - key: DEFAULT_STAND_FEE
+        value: "5.00"
+      - key: ALLOW_DEMO_SEED
+        value: "false"
+      # ── Market Assistant (chatbot) ──
+      # Empty CHATBOT_DATABASE_URL = chat tables live in the same Neon database.
+      - key: CHATBOT_DATABASE_URL
+        sync: false
+      - key: CHATBOT_SECRET_KEY
+        generateValue: true
+      # "mock" = labelled deterministic assistant (no LLM key needed for the demo).
+      # Switch to openai/openrouter/groq and set the key when ready.
+      - key: CHATBOT_LLM_PROVIDER
+        value: "mock"
+      - key: CHATBOT_LLM_API_KEY
+        sync: false
+      - key: CHATBOT_LLM_MODEL
+        sync: false
+
+# ── Next.js frontend ────────────────────────────────────────────────────────
+  - type: web
+    name: pamarket-frontend
+    runtime: node
+    rootDir: .
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20.11.0"
+      # The Flask API base URL consumed by the redesigned frontend
+      - key: NEXT_PUBLIC_API_URL
+        value: "https://pamarket-backend.onrender.com/api/v1"
