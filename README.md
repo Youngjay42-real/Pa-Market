@@ -1,0 +1,59 @@
+# StandProof frontend
+
+A redesigned market allocation workspace for Lusaka City Market, built with Next.js 14, React 18, TypeScript and CSS Modules. StandProof follows an application through review, a stand offer, acceptance, two-party handover and backend-controlled payment eligibility.
+
+## Run locally
+
+```bash
+npm ci
+npm run dev
+```
+
+Open the development URL printed by Next.js. To preview the production build:
+
+```bash
+npm run build
+npm start
+```
+
+If port 3000 is occupied, use `npm start -- --port 3100`.
+
+## Explore the demonstration
+
+Choose **Sign in**, then **Open vendor demo** or **Open administrator demo**. Registration also offers **Start a new vendor demo** for an empty application journey. The workspace account menu switches between the administrator and the current demo vendor. Profile selection is not authentication.
+
+The market explorer has 120 fictional stands in the existing Produce, Textiles, Hardware and Food Court zones. Search, category/zone/status filters, stand selection, zoom, allocation queue and stand details work. Administrative review and allocation require explicit confirmation. Vendor and official handover confirmations update the same sample records and audit trail.
+
+**This is a labelled frontend demonstration.** It does not process DevDraft payments, authenticate real users, issue valid trading permits, deliver reports to officials or call an AI provider. A demo payment request stays pending; the browser never manufactures successful payment confirmation. Real API failures never silently become demonstration data.
+
+## Routes
+
+| Area | Routes |
+| --- | --- |
+| Public | `/`, `/map`, `/login`, `/vendor/register` |
+| Vendor | `/vendor/dashboard`, `/vendor/apply`, `/vendor/payment`, `/vendor/permit` |
+| Administration | `/admin`, `/admin/applications`, `/admin/allocate`, `/admin/verify`, `/admin/payments`, `/admin/audit-logs` |
+| Updates and reporting | `/notifications`, `/whistleblower` |
+
+`/dashboard` redirects to the vendor dashboard. Navigation adapts to mobile, tables scroll within their containers and the spatial map can pan within its own viewport.
+
+## Integration and ownership
+
+`src/lib/standproof/` isolates fixtures, persistent demo workflows and typed API transport. `src/types/standproof.ts` defines frontend view models. `NEXT_PUBLIC_API_URL` configures the Flask base URL; the approved contract adapter must be implemented before live requests are enabled. Setting only the URL shows a connection error and empty live records. `NEXT_PUBLIC_DEMO_MODE=true` explicitly selects demo mode.
+
+The existing chatbot team’s widget, API client, hook, contract and Flask proxy configuration are preserved. Set `NEXT_PUBLIC_CHATBOT_ENABLED=true` to mount that contract-backed widget, and configure `FLASK_API_URL` for its existing same-origin proxy or `NEXT_PUBLIC_API_URL` for a direct Flask origin. The default is the clearly labelled frontend demo guide. Demo personas are never passed off as backend-authenticated identities. The core authentication/payment contract adapter is still pending; no endpoints or provider credentials have been guessed. See [the frontend integration handoff](FRONTEND_INTEGRATION.md) for the exact adapter boundary and backend dependencies.
+
+This frontend commit excludes the legacy Next.js API routes, Prisma schema, generated database client, and database/payment helpers. The repository’s existing `backend/` and `docs/CHATBOT_CONTRACT.md` remain unchanged.
+
+## Validation
+
+```bash
+npm run lint
+npx tsc --noEmit --incremental false
+node src/lib/standproof/verify-workflow.cjs
+npm run build
+```
+
+The workflow verification uses isolated in-memory browser storage and makes no provider requests. It exercises cross-role review/allocation/handover, record ownership, duplicate prevention, pending-only payment previews, persistence, API errors, stale responses and logout cache clearing.
+
+The frontend was verified on desktop, laptop, tablet and mobile, including the complete cross-role handover journey. Inter is served locally; no external font request is required to build or run the interface.
