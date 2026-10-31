@@ -1,0 +1,8 @@
+.canvas{min-height:510px}
+.pagePanel{padding:20px}
+.grid{pointer-events:none}
+.position,.position:hover{background:#e8edef;border-color:#d6dfe2;color:#70828a;box-shadow:none;transform:none;font-size:8px}
+.caption{margin:10px 0 0;color:#786644;background:#fbf5e8;border:1px solid #efe4ca;border-radius:4px;padding:10px 12px;font-size:11px;line-height:1.55}
+.compact.canvas{min-height:0}
+.compact .position,.compact .position:hover{font-size:6px}
+@media(max-width:760px){.canvas{min-height:440px}}
