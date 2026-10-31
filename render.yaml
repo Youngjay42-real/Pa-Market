@@ -11,12 +11,7 @@ services:
     runtime: python
     rootDir: backend
     plan: free
-    buildCommand: |
-      python -m venv .venv
-      .venv/bin/pip install --upgrade pip
-      .venv/bin/pip install -r requirements.txt
-      # provision/upgrade the Neon schema before serving traffic
-      .venv/bin/flask db upgrade
+    buildCommand: python -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -r requirements.txt && FLASK_APP=wsgi.py .venv/bin/flask db upgrade
     startCommand: .venv/bin/gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
     healthCheckPath: /healthz
     envVars:
@@ -83,6 +78,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20.11.0"
-      # The Flask API base URL consumed by the redesigned frontend
+      # The Flask API base URL consumed by the redesigned frontend (direct calls)
       - key: NEXT_PUBLIC_API_URL
         value: "https://pamarket-backend.onrender.com/api/v1"
+      # Market Assistant widget on; FLASK_API_URL enables the /api/v1 proxy
+      - key: NEXT_PUBLIC_CHATBOT_ENABLED
+        value: "true"
+      - key: FLASK_API_URL
+        value: "https://pamarket-backend.onrender.com"
