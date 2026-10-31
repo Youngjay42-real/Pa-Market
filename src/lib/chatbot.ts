@@ -13,9 +13,9 @@ import type { ChatIdentityInfo, ChatMessageDto, ChatSessionResponse } from "./ch
 export const CHAT_BASE = "/api/v1/chatbot";
 
 function resolveBase(): string {
-  // StandProof's adapter requires NEXT_PUBLIC_API_URL to end in /api/v1.
-  // The chatbot contract paths already carry /api/v1 — dedupe the suffix so
-  // both clients can share one environment variable without double prefixes.
+  // The chatbot contract paths already carry /api/v1. Dedupe that suffix from
+  // the shared API setting; when it is just /api/v1, the request stays on the
+  // frontend origin and is forwarded by the configured Next.js rewrite.
   const raw = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
   const base = raw.replace(/\/api\/v1$/, "");
   return `${base}${CHAT_BASE}`;

@@ -12,8 +12,8 @@ const nextConfig = {
   },
   // StandProof chatbot proxy (docs/CHATBOT_CONTRACT.md §9):
   // when FLASK_API_URL is set, /api/v1/* is forwarded to the Flask backend.
-  // Everything stays same-origin in development, and NEXT_PUBLIC_API_URL drives
-  // direct Flask access in production.
+  // Both the workspace adapter and Market Assistant can then call this
+  // same-origin path in local and hosted deployments.
   async rewrites() {
     if (!process.env.FLASK_API_URL) return [];
     const flask = String(process.env.FLASK_API_URL).replace(/\/$/, "");

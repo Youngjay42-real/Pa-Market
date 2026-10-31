@@ -6,7 +6,7 @@ The redesigned frontend is at the repository root. It preserves Next.js 14, Reac
 
 The approved Flask adapter is implemented in `src/lib/standproof/flask.ts` and installed by the application shell when the backend URL is configured. It loads market stands publicly and fetches account-specific records after real sign-in. The chatbot continues to use its separate approved contract in `docs/CHATBOT_CONTRACT.md`.
 
-With `NEXT_PUBLIC_API_URL` absent, the service is in `demo` mode. `NEXT_PUBLIC_DEMO_MODE=true` explicitly selects demonstration mode even if an API URL exists. The API URL can be the Flask origin or end in `/api/v1`; all adapter requests use the approved `/api/v1` namespace. Backend failures show an error and empty live records rather than falling back to sample data. `NEXT_PUBLIC_*` variables are embedded when Next.js starts or builds, so restart the frontend after changing them.
+With `NEXT_PUBLIC_API_URL` absent, the service is in `demo` mode. `NEXT_PUBLIC_DEMO_MODE=true` explicitly selects demonstration mode even if an API URL exists. The API URL can be the Flask origin, its `/api/v1` base, or `/api/v1` to use the same-origin Next.js rewrite. All adapter requests use the approved `/api/v1` namespace. Backend failures show an error and empty live records rather than falling back to sample data. `NEXT_PUBLIC_*` variables are embedded when Next.js starts or builds, so redeploy the frontend after changing them.
 
 ## Demonstration behavior
 
@@ -20,7 +20,7 @@ With `NEXT_PUBLIC_API_URL` absent, the service is in `demo` mode. `NEXT_PUBLIC_D
 
 ## Connecting Flask
 
-`createApiClient()` in `src/lib/standproof/client.ts` provides a transport configured by `NEXT_PUBLIC_API_URL`. It supports JSON, request cancellation, timeout, typed errors, HTTP-only cookie sessions and an optional access-token callback. An origin-only URL is normalized to `/api/v1`; an already versioned URL is preserved. Other URL path prefixes are rejected.
+`createApiClient()` in `src/lib/standproof/client.ts` provides a transport configured by `NEXT_PUBLIC_API_URL`. It supports JSON, request cancellation, timeout, typed errors, HTTP-only cookie sessions and an optional access-token callback. An origin-only URL is normalized to `/api/v1`; an already versioned URL is preserved. `/api/v1` uses the same-origin proxy. Other URL path prefixes are rejected.
 
 The installed `StandproofAdapter` maps the approved auth, stands, applications, allocations, payments, notifications, audit and reports endpoints to the frontend view models. Its `getSnapshot()` uses backend role-scoped list endpoints; vendor personal records are not obtained from admin-wide endpoints. Live mode disables demo persona and reset actions.
 
@@ -52,4 +52,4 @@ The frontend-only commit omits the legacy Next.js API routes, Prisma schema, gen
 
 ## Existing chatbot integration
 
-`src/components/chatbot/AssistantSurface.tsx` selects the Flask-backed `ChatWidget` when `NEXT_PUBLIC_CHATBOT_ENABLED=true` or `NEXT_PUBLIC_API_URL` is configured, unless demo mode is explicit or the chatbot is explicitly disabled. Otherwise it renders the clearly labelled local guide. `FLASK_API_URL` is the Flask origin used by the Next.js same-origin proxy; set the chatbot flag when using only that proxy. Locally, `backend/wsgi.py` loads only `backend/.env`, so put `CHATBOT_LLM_PROVIDER=nvidia_nim` and the secret `CHATBOT_LLM_API_KEY` there, then restart Flask. Never put the key in a `NEXT_PUBLIC_*` variable. Personalised chat requires real backend authentication; browser demo personas are not sent as verified identities.
+`src/components/chatbot/AssistantSurface.tsx` selects the Flask-backed `ChatWidget` when `NEXT_PUBLIC_CHATBOT_ENABLED=true` or `NEXT_PUBLIC_API_URL` is configured, unless demo mode is explicit or the chatbot is explicitly disabled. Otherwise it renders the clearly labelled local guide. `FLASK_API_URL` is the Flask origin used by the Next.js same-origin proxy; setting `NEXT_PUBLIC_API_URL=/api/v1` routes both the widget and workspace API through it. Locally, `backend/wsgi.py` loads only `backend/.env`, so put `CHATBOT_LLM_PROVIDER=nvidia_nim` and the secret `CHATBOT_LLM_API_KEY` there, then restart Flask. Never put the key in a `NEXT_PUBLIC_*` variable. Personalised chat requires real backend authentication; browser demo personas are not sent as verified identities.

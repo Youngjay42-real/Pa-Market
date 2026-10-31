@@ -18,10 +18,17 @@ export function createApiClient(options: ApiClientOptions = {}) {
     async request<T>(contractPath: string, init: RequestInit = {}): Promise<T> {
       if (!configured) throw new ApiError("The Flask API URL has not been configured.", 0, "API_NOT_CONFIGURED");
       let base: URL;
-      try { base = new URL(configured); } catch { throw new ApiError("The Flask API URL must be an absolute HTTP or HTTPS URL.", 0, "INVALID_API_URL"); }
+      const sameOriginProxy = configured === "/api/v1";
+      try {
+        if (sameOriginProxy && typeof window !== "undefined") base = new URL(window.location.origin);
+        else if (sameOriginProxy) throw new Error("The same-origin API proxy is only available in a browser.");
+        else base = new URL(configured);
+      } catch {
+        throw new ApiError("The Flask API URL must be an absolute HTTP or HTTPS URL, or /api/v1 for the same-origin proxy.", 0, "INVALID_API_URL");
+      }
       if (base.protocol !== "https:" && base.protocol !== "http:") throw new ApiError("The Flask API URL must use HTTP or HTTPS.", 0, "INVALID_API_URL");
       if (!contractPath.startsWith("/") || contractPath.startsWith("//") || contractPath.includes("..") || /^[a-z]+:/i.test(contractPath)) throw new ApiError("Use a relative path from the approved API contract.", 0, "INVALID_CONTRACT_PATH");
-      const configuredPrefix = base.pathname.replace(/\/+$/, "");
+      const configuredPrefix = sameOriginProxy ? "/api/v1" : base.pathname.replace(/\/+$/, "");
       if (configuredPrefix && configuredPrefix !== "/api/v1") {
         throw new ApiError("Set the Flask API URL to its origin or its /api/v1 base URL.", 0, "INVALID_API_NAMESPACE");
       }
