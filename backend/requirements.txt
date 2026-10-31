@@ -1,0 +1,10 @@
+# StandProof backend — chatbot service dependencies
+# NOTE (Developer 3): the backend lead (Developer 1) will own the consolidated
+# requirements list once the full Flask foundation lands. Only additive
+# chatbot-specific dependencies live here for now.
+
+Flask>=3.0,<4
+SQLAlchemy>=2.0,<2.1
+psycopg2-binary>=2.9  # Neon PostgreSQL driver (unused until a postgres URL is configured)
+requests>=2.31
+python-dotenv>=1.0
