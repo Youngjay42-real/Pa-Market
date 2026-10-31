@@ -145,3 +145,39 @@ def test_bootstrap_admin_fails_for_existing_vendor_phone(app):
     result = app.test_cli_runner().invoke(args=["bootstrap-admin"])
     assert result.exit_code != 0
     assert "already used by a non-admin account" in result.output
+
+
+def test_bootstrap_admin_updates_existing_admin_password_from_env(app, client):
+    from app.services.auth_service import hash_password
+
+    with app.app_context():
+        db.session.add(
+            User(
+                phone="0776596009",
+                full_name="Council Administrator",
+                password_hash=hash_password("previous-private-password"),
+                role="admin",
+            )
+        )
+        db.session.commit()
+
+    password = "new-private-password-987"
+    app.config.update(
+        ADMIN_BOOTSTRAP_PHONE="0776596009",
+        ADMIN_BOOTSTRAP_NAME="Council Administrator",
+        ADMIN_BOOTSTRAP_PASSWORD=password,
+    )
+    result = app.test_cli_runner().invoke(args=["bootstrap-admin"])
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == "Configured admin password updated."
+
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"phone": "0776596009", "password": "previous-private-password"},
+    ).status_code == 401
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"phone": "0776596009", "password": password},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["user"]["role"] == "admin"

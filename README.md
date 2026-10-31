@@ -30,7 +30,7 @@ The interactive **Market stand map** is available at `/map`. In the demonstratio
 
 ## Render administrator
 
-Before deploying, set `ADMIN_BOOTSTRAP_PASSWORD` to a strong private value in the `pamarket-backend` service's Render environment settings. The Blueprint provisions the initial administrator with phone number `0776596009`; sign in at `/login` using that phone number and the password you set. The password is never committed or printed by the bootstrap command. Keep all three `ADMIN_BOOTSTRAP_*` values configured together. Provisioning is idempotent and does not add demo vendors or stands.
+Set `ADMIN_BOOTSTRAP_PASSWORD` to a strong private value in the `pamarket-backend` service's Render environment settings. The Blueprint provisions the administrator with phone number `0776596009`; sign in at `/login` using that phone number and the password you set. On deploy/startup, the backend synchronizes that private value to the admin account, including an account created by an earlier deploy. The password is never committed or printed by the bootstrap command. Keep all three `ADMIN_BOOTSTRAP_*` values configured together. Provisioning is idempotent and does not add demo vendors or stands.
 
 ## Routes
 

@@ -116,7 +116,7 @@ def register_seed_command(app) -> None:
 
         from ..errors import ApiError
         from ..models import User
-        from ..services.auth_service import hash_password
+        from ..services.auth_service import hash_password, verify_password
         from ..utils.validation import clean_text, normalize_phone, password_strength
 
         try:
@@ -129,7 +129,21 @@ def register_seed_command(app) -> None:
         existing = db.session.query(User).filter_by(phone=phone).one_or_none()
         if existing:
             if existing.role == "admin":
-                click.echo("Configured admin already exists; no changes made.")
+                if verify_password(password, existing.password_hash):
+                    click.echo("Configured admin already exists; no changes made.")
+                    return
+
+                existing.password_hash = hash_password(password)
+                AuditService.record(
+                    "ADMIN_BOOTSTRAP_PASSWORD_UPDATED",
+                    actor="system",
+                    actor_role="system",
+                    entity_type="user",
+                    entity_id=existing.id,
+                    details="Initial administrator password synchronized from private deployment configuration.",
+                )
+                db.session.commit()
+                click.echo("Configured admin password updated.")
             else:
                 raise click.ClickException(
                     "The configured admin phone is already used by a "
