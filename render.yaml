@@ -60,12 +60,15 @@ services:
       - key: CHATBOT_SECRET_KEY
         generateValue: true
       # "mock" = labelled deterministic assistant (no LLM key needed for the demo).
-      # Switch to openai/openrouter/groq and set the key when ready.
+      # Hackathon decision: NVIDIA NIM (ChatbotLLM) — set CHATBOT_LLM_API_KEY
+      # (nvapi-… from build.nvidia.com) and optionally CHATBOT_LLM_MODEL.
       - key: CHATBOT_LLM_PROVIDER
-        value: "mock"
+        value: "nvidia_nim"
       - key: CHATBOT_LLM_API_KEY
         sync: false
       - key: CHATBOT_LLM_MODEL
+        sync: false
+      - key: CHATBOT_LLM_BASE_URL
         sync: false
 
 # ── Next.js frontend ────────────────────────────────────────────────────────

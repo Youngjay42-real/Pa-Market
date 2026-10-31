@@ -11,7 +11,7 @@ Two implementations behind one tiny interface:
   name is surfaced on the health endpoint as ``"llmProvider": "mock"`` — the mock is
   never passed off as a real integration.
 
-Provider selection: env ``CHATBOT_LLM_PROVIDER`` = mock | openai | openrouter |
+Provider selection: env ``CHATBOT_LLM_PROVIDER`` = mock | nvidia_nim | openai | openrouter |
 groq | custom (+ ``CHATBOT_LLM_API_KEY``, ``CHATBOT_LLM_MODEL``, ``CHATBOT_LLM_BASE_URL``).
 """
 
@@ -33,6 +33,15 @@ PROVIDER_DEFAULTS = {
     "openai": {"base_url": "https://api.openai.com/v1", "model": "gpt-4o-mini"},
     "openrouter": {"base_url": "https://openrouter.ai/api/v1", "model": "openai/gpt-4o-mini"},
     "groq": {"base_url": "https://api.groq.com/openai/v1", "model": "llama-3.1-8b-instant"},
+    # NVIDIA NIM catalogue (build.nvidia.com) — OpenAI-compatible /chat/completions.
+    # Keys look like "nvapi-…". Models ship names such as "meta/llama-3.1-8b-instruct".
+    "nvidia_nim": {"base_url": "https://integrate.api.nvidia.com/v1", "model": "meta/llama-3.1-8b-instruct"},
+}
+
+# Friendly aliases → canonical provider keys.
+_PROVIDER_ALIASES = {
+    "nvidia": "nvidia_nim",
+    "nim": "nvidia_nim",
 }
 
 
@@ -146,6 +155,11 @@ class OpenAICompatibleLLMClient(BaseLLMClient):
 # --------------------------------------------------------------------------
 # Deterministic rule-based fallback (labelled "mock")
 # --------------------------------------------------------------------------
+
+class NvidiaNimLLMClient(OpenAICompatibleLLMClient):
+    """NVIDIA NIM inference catalogue (integrate.api.nvidia.com)."""
+
+    name = "nvidia-nim"
 
 _INTENT_APPLICATION = re.compile(r"application|allocation status|\bmy stand\b|\bmy position\b|queue position|where am i|my status", re.I)
 _INTENT_PAYMENTS = re.compile(r"payment|receipt|paid|bill|levy|invoice", re.I)
@@ -479,6 +493,7 @@ FALLBACK_GENERIC_TEXT = (
 def llm_client_from_env(env: Optional[Dict[str, str]] = None) -> BaseLLMClient:
     environment = dict(env or os.environ)
     provider = (environment.get("CHATBOT_LLM_PROVIDER") or "mock").strip().lower()
+    provider = _PROVIDER_ALIASES.get(provider, provider)
 
     if provider == "mock":
         return RuleBasedLLMClient()
@@ -497,7 +512,8 @@ def llm_client_from_env(env: Optional[Dict[str, str]] = None) -> BaseLLMClient:
     if not base_url or not model:
         return RuleBasedLLMClient()
 
-    return OpenAICompatibleLLMClient(base_url=base_url, api_key=api_key, model=model)
+    client_cls = NvidiaNimLLMClient if provider == "nvidia_nim" else OpenAICompatibleLLMClient
+    return client_cls(base_url=base_url, api_key=api_key, model=model)
 
 
 def provider_label(client: BaseLLMClient) -> str:

@@ -264,7 +264,8 @@ message + Retry button.
 | --- | --- | --- |
 | `CHATBOT_DATABASE_URL` | SQLite file `prisma/dev.db` (same data as the app) | SQLAlchemy URL. Prisma `file:` URLs are translated. Neon: `postgresql+psycopg://…` |
 | `CHATBOT_SECRET_KEY` | dev fallback + warning | HMAC secret for chat tokens and identity stamping |
-| `CHATBOT_LLM_PROVIDER` | `mock` | `mock` \| `openai` \| `openrouter` \| `groq` \| `custom` |
+| `CHATBOT_LLM_PROVIDER` | `mock` | `nvidia_nim` \| `mock` \| `openai` \| `openrouter` \| `groq` \| `custom` |
+| `CHATBOT_LLM_API_KEY` | — | provider API key (`nvapi-…` for NVIDIA NIM); empty key = labelled `mock` fallback |
 | `CHATBOT_LLM_API_KEY` | — | Provider API key (never logged, never in responses) |
 | `CHATBOT_LLM_MODEL` | provider default | e.g. `gpt-4o-mini` |
 | `CHATBOT_LLM_BASE_URL` | provider default | For `custom` providers |
@@ -382,8 +383,8 @@ PaMarket, and the tool never claims otherwise.
 | --- | --- | --- |
 | `CHATBOT_DATABASE_URL` | *(empty)* | Chat DB; empty = share `DATABASE_URL` |
 | `CHATBOT_SECRET_KEY` | dev fallback | Signed chat-token secret (required before any real deployment) |
-| `CHATBOT_LLM_PROVIDER` | `mock` | `mock | openai | openrouter | groq | custom` |
-| `CHATBOT_LLM_API_KEY` | *(empty)* | Real provider key (never committed) |
+| `CHATBOT_LLM_PROVIDER` | `mock` | `nvidia_nim | mock | openai | openrouter | groq | custom` |
+| `CHATBOT_LLM_API_KEY` | *(empty)* | Real provider key — NVIDIA NIM keys look like `nvapi-…` (never committed) |
 | `CHATBOT_LLM_MODEL` / `CHATBOT_LLM_BASE_URL` | provider defaults | For non-mock providers |
 | `CHATBOT_CORS_ORIGINS` / `CHATBOT_PORT` | app defaults | Standalone-run affordances |
 

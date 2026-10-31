@@ -100,9 +100,9 @@ def _ensure_stands() -> None:
 def register_seed_command(app) -> None:
     @app.cli.command("seed-demo")
     @click.option("--admin-phone", default="0776596009", show_default=True)
-    @click.option("--admin-password", default="1234567", show_default=True)
+    @click.option("--admin-password", default="admin12345", show_default=True)
     @click.option("--vendor-phone", default="0977123456", show_default=True)
-    @click.option("--vendor-password", default="pass123", show_default=True)
+    @click.option("--vendor-password", default="vendor12345", show_default=True)
     @click.option("--yes", is_flag=True, help="Write demo rows (required confirmation).")
     def seed_demo(admin_phone: str, admin_password: str, vendor_phone: str,
                   vendor_password: str, yes: bool) -> None:
