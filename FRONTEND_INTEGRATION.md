@@ -40,7 +40,7 @@ Required backend capabilities, **not new agreed endpoints**:
 | Reporting | Validated submission, attachment requirements if supported, protected contact information, real reference and delivery feedback |
 | Chatbot | Agreed session/message/history/error schemas with role-scoped structured-tool service; responses must identify retrieved data versus generated explanations |
 
-Backend enforcement is required for all payment conditions, idempotency, webhook authenticity, USD $5 transaction / $50 team limits and any hackathon refund deadline. The frontend does not implement or claim these server guarantees. Payment amount and fee strings in demo fixtures are presentation examples, not exchange rates or live charge instructions.
+Backend enforcement is required for all payment conditions, idempotency, webhook authenticity, ZMW K5 transaction / K50 team limits and any hackathon refund deadline. The frontend does not implement or claim these server guarantees. Payment amount and fee strings in demo fixtures are presentation examples, not exchange rates or live charge instructions.
 
 ## Frontend workflow verification
 

@@ -24,7 +24,7 @@ Hard rules you must never break:
 5. HONEST LIMITS — if you are unsure, say what you don't know and suggest the accurate page or person. Suggest one related follow-up question when helpful.
 6. LABEL SOURCES — when you used records from tools, phrase the answer as coming from verified records. When you are only explaining policy, present it as guidance. The system marks each reply for the UI.
 
-Style: warm, plain English, concise. Short paragraphs or small bullet lists. Amounts exactly as tool outputs give them (e.g. "USD 5.00"). No emojis. Max ~120 words unless listing records.
+Style: warm, plain English, concise. Short paragraphs or small bullet lists. Amounts exactly as tool outputs give them (e.g. "ZMW 5.00"). No emojis. Max ~120 words unless listing records.
 """
 
 VENDOR_SUFFIX = """

@@ -5,7 +5,7 @@ Design rules (CHATBOT_CONTRACT.md §6):
 * Every function receives an :class:`AccessContext`. Query scoping comes from the
   context's server-bound identity — there are no parameters that allow one caller
   to request another vendor's records.
-* Amounts are returned as formatted strings ("USD 5.00"); the chatbot performs no
+* Amounts are returned as formatted strings ("ZMW 5.00"); the chatbot performs no
   floating-point arithmetic and never stores it.
 * Dates come back as readable strings plus age helpers where relevant.
 * All queries are SELECT-only.
@@ -109,13 +109,13 @@ def _hours_since(value: Any, now: datetime) -> Optional[float]:
     return round((now - dt).total_seconds() / 3600, 1)
 
 
-def _money(amount: Any, currency: Any = "USD") -> str:
+def _money(amount: Any, currency: Any = "ZMW") -> str:
     try:
         total = float(Decimal(str(amount or 0)))
     except (TypeError, ValueError, InvalidOperation):
         total = 0.0
     # Formatting only — no arithmetic for decisions; string output per contract.
-    return f"{currency or 'USD'} {total:,.2f}"
+    return f"{currency or 'ZMW'} {total:,.2f}"
 
 
 def _now() -> datetime:
@@ -346,7 +346,7 @@ def my_financials(ctx: AccessContext) -> dict:
     now = _now()
 
     payments = _payments_for_vendor_nrc(ctx, nrc)
-    currency = (payments[0].get("currency") if payments else None) or "USD"
+    currency = (payments[0].get("currency") if payments else None) or "ZMW"
     totals: Dict[str, Decimal] = {status: Decimal("0") for status in PAYMENT_STATUSES}
     counts: Dict[str, int] = {status: 0 for status in PAYMENT_STATUSES}
     for p in payments:

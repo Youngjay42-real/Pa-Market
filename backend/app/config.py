@@ -89,7 +89,7 @@ class BaseConfig:
     DEVDRAFT_DESTINATION_ADDRESS = os.environ.get("DEVDRAFT_DESTINATION_ADDRESS", "")
 
     # ── Hackathon financial-safety limits (server-side enforcement) ──────────
-    PAYMENT_CURRENCY = os.environ.get("PAYMENT_CURRENCY", "USD")
+    PAYMENT_CURRENCY = os.environ.get("PAYMENT_CURRENCY", "ZMW")
     PAYMENT_MAX_PER_TRANSACTION = _decimal("PAYMENT_MAX_PER_TRANSACTION", "5.00")
     PAYMENT_MAX_TEAM_TOTAL = _decimal("PAYMENT_MAX_TEAM_TOTAL", "50.00")
     DEFAULT_STAND_FEE = _decimal("DEFAULT_STAND_FEE", "5.00")

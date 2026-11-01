@@ -373,7 +373,7 @@ class RuleBasedLLMClient(BaseLLMClient):
 
     def _render_get_my_financials(self, d: dict) -> str:
         levy = d.get("standLevy") or {}
-        lines = [f"Your stand-levy summary (verified records, {d.get('currency') or 'USD'}):"]
+        lines = [f"Your stand-levy summary (verified records, {d.get('currency') or 'ZMW'}):"]
         lines.append(f"• Paid to date: {levy.get('paidTotal')}.")
         lines.append(f"• Awaiting verification: {levy.get('awaitingVerificationTotal')}.")
         zero_received = str(levy.get("refundedTotal") or "").endswith("0.00")

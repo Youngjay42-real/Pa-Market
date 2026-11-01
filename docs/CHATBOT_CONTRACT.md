@@ -353,7 +353,7 @@ part of the integration:
   `pending | successful | failed | refunded | disputed` (the prototype's
   `confirmed`/`failed` naming is replaced). Text answers are derived verbatim
   from these values — nothing is invented.
-* Currency amounts use the stored currency (USD in PaMarket, e.g. "USD 5.00").
+* Currency amounts use the stored currency (Zambian kwacha in PaMarket, e.g. "ZMW 5.00").
 
 ### 14.2 `get_my_financials` adaptation
 

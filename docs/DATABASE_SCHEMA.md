@@ -61,7 +61,7 @@ The interactive map grid.
 | `vendor_name`/`vendor_nrc` | String | denormalised for map display (nrc indexed) |
 | `allocated_at`, `hold_expires_at` | TIMESTAMPTZ | occupancy / offer-hold windows |
 | `fee_amount`      | `Numeric(10,2)` | default 5.00 |
-| `currency`        | `String(3)`    | default USD |
+| `currency`        | `String(3)`    | default ZMW |
 
 ## applications
 Queue records.

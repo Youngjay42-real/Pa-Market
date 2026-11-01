@@ -32,7 +32,7 @@ class Payment(Base):
         ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="ZMW")
     status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)
     provider: Mapped[str] = mapped_column(String(24), nullable=False, default="devdraft")
     provider_reference: Mapped[Optional[str]] = mapped_column(String(64), unique=True, nullable=True, index=True)
