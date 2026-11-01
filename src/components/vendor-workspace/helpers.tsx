@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useStandproof } from "@/lib/standproof";
 import s from "./vendor-workspace.module.css";
 
-export const money = (amount: string, currency = "USD") => new Intl.NumberFormat("en-ZM", { style: "currency", currency }).format(Number(amount));
+export const money = (amount: string, currency = "ZMW") => new Intl.NumberFormat("en-ZM", { style: "currency", currency }).format(Number(amount));
 export const date = (value?: string, time = false) => value ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", ...(time ? { hour: "2-digit", minute: "2-digit" } as const : {}), timeZone: "Africa/Lusaka" }).format(new Date(value)) : "Awaiting confirmation";
 export const label = (value: string) => value.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
 export function Status({ value }: { value: string }) { return <span className={`${s.badge} ${["pending", "offered", "not_eligible", "handover"].includes(value) ? s.pending : ["rejected", "failed"].includes(value) ? s.red : ["refunded"].includes(value) ? s.neutral : value === "verification" ? s.purple : ""}`}>{value === "handover" ? "Awaiting handover" : value === "verification" ? "Under verification" : label(value)}</span>; }

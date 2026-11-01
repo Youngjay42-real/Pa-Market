@@ -31,6 +31,7 @@ import type {
   PaymentRecord,
   ReportInput,
   ReportRecord,
+  ReportStatus,
   StandApplication,
   StandproofAdapter,
   StandproofSnapshot,
@@ -258,7 +259,7 @@ function paymentRecord(wire: WirePayments["payments"][number], fallbackVendorId:
     allocationId: wire.allocation_id,
     vendorId: wire.vendor_id || fallbackVendorId,
     amount: /^\d+\.\d{2}$/.test(wire.amount) ? wire.amount : "0.00",
-    currency: "USD",
+    currency: wire.currency === "USD" ? "USD" : "ZMW",
     status: (known as string[]).includes(status) ? (status as PaymentRecord["status"]) : "pending",
     providerReference: wire.provider_reference ?? undefined,
     receiptReference: wire.receipt_no ?? undefined,
@@ -454,6 +455,59 @@ export function createFlaskAdapter() {
     };
   }
 
+  /** Public form categories → the backend's approved report categories. */
+  const REPORT_CATEGORY_BY_LABEL: Record<string, string> = {
+    "Unfair allocation": "favouritism",
+    "Unofficial payment request": "bribe_request",
+    "Duplicate application": "dupe_application",
+    "Stand occupancy concern": "other",
+    "Handover problem": "other",
+    "Other concern": "other",
+    bribe_request: "bribe_request",
+    favouritism: "favouritism",
+    fake_documents: "fake_documents",
+    dupe_application: "dupe_application",
+    other: "other",
+  };
+
+  const REPORT_LABEL_BY_CATEGORY: Record<string, string> = {
+    bribe_request: "Unofficial payment request",
+    favouritism: "Unfair allocation",
+    fake_documents: "Fake documents",
+    dupe_application: "Duplicate application",
+    other: "Other concern",
+  };
+
+  const REPORT_STATUS_BY_WIRE: ReportStatus[] = [
+    "received", "under_review", "resolved", "dismissed",
+  ];
+
+  interface WireReport {
+    id: string;
+    reference: string;
+    category: string;
+    location: string | null;
+    status: string;
+    created_at: string;
+    description?: string;
+    contact_email?: string | null;
+  }
+
+  function reportToView(wire: WireReport): ReportRecord {
+    return {
+      id: wire.id,
+      reference: wire.reference,
+      category: REPORT_LABEL_BY_CATEGORY[wire.category] ?? REPORT_LABEL_BY_CATEGORY.other,
+      description: wire.description ?? "",
+      location: wire.location ?? undefined,
+      contactEmail: wire.contact_email ?? undefined,
+      status: REPORT_STATUS_BY_WIRE.includes(wire.status as ReportStatus)
+        ? (wire.status as ReportStatus)
+        : "received",
+      createdAt: wire.created_at,
+    };
+  }
+
   /* -------------------------------------------------------------- actions */
 
   const adapter: StandproofAdapter & {
@@ -479,7 +533,7 @@ export function createFlaskAdapter() {
 
       const isAdmin = context.user.role === "admin";
 
-      const [applicationsPayload, allocationsPayload, paymentsPayload, notificationsPayload] =
+      const [applicationsPayload, allocationsPayload, paymentsPayload, notificationsPayload, reportsPayload] =
         await Promise.all([
           isAdmin
             ? api.request<WireApplications>("/applications")
@@ -489,6 +543,12 @@ export function createFlaskAdapter() {
             : api.request<WireAllocations>("/allocations/mine"),
           api.request<WirePayments>("/payments/history"),
           api.request<WireNotifications>("/notifications"),
+          // Admin-only concern reports (advisory: an unavailable endpoint
+          // must not block the rest of the workspace).
+          (isAdmin
+            ? api.request<{ reports: WireReport[] }>("/reports")
+            : Promise.resolve({ reports: [] })
+          ).catch(() => ({ reports: [] as WireReport[] })),
         ]);
 
       let auditPayload: WireAudit = { logs: [] };
@@ -528,7 +588,9 @@ export function createFlaskAdapter() {
           notificationToView(item, session.id),
         ),
         audit: auditPayload.logs.map((item) => auditToView(item, context)),
-        reports: [...localReports],
+        reports: context.user.role === "admin"
+          ? reportsPayload.reports.map(reportToView)
+          : [...localReports],
       };
     },
 
@@ -645,7 +707,9 @@ export function createFlaskAdapter() {
       const wire = await api.request<{ reference?: string; id?: string }>("/reports", {
         method: "POST",
         body: JSON.stringify({
-          category: input.category,
+          // The workstation form's categories map onto the backend's approved
+          // report categories (unknown labels fall back to "other").
+          category: REPORT_CATEGORY_BY_LABEL[input.category.trim()] ?? "other",
           description: input.description,
           location: input.location,
           contact_email: input.contactEmail,
@@ -660,6 +724,27 @@ export function createFlaskAdapter() {
       localReports.unshift(record);
       // Local list intentionally minimal: it never contains the report body.
       return record;
+    },
+
+    fetchReports: async () => {
+      const context = await loadContext();
+      if (!context || context.user.role !== "admin") {
+        throw new Error("Only administrator accounts can review submitted reports.");
+      }
+      const wire = await api.request<{ reports: WireReport[] }>("/reports");
+      return wire.reports.map(reportToView);
+    },
+
+    setReportStatus: async (id: string, status: ReportStatus) => {
+      const context = await loadContext();
+      if (!context || context.user.role !== "admin") {
+        throw new Error("Only administrator accounts can update report status.");
+      }
+      const wire = await api.request<WireReport>(`/reports/${encodeURIComponent(id)}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status }),
+      });
+      return reportToView(wire);
     },
   } as StandproofAdapter & { logout: () => Promise<void> };
 

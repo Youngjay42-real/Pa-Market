@@ -70,7 +70,7 @@ export interface PaymentRecord {
   allocationId: string;
   vendorId: string;
   amount: string;
-  currency: "USD";
+  currency: "USD" | "ZMW";
   status: "not_eligible" | "eligible" | "pending" | "successful" | "failed" | "refunded" | "disputed";
   providerReference?: string;
   receiptReference?: string;
@@ -105,9 +105,13 @@ export interface ReportInput {
   contactEmail?: string;
 }
 
+export type ReportStatus = "received" | "under_review" | "resolved" | "dismissed";
+
 export interface ReportRecord extends ReportInput {
   id: string;
-  status: "received";
+  /** Council-facing reference (e.g. WBR-260101-AB12CD). */
+  reference?: string;
+  status: ReportStatus;
   createdAt: string;
 }
 
@@ -135,6 +139,10 @@ export interface StandproofActions {
   markNotificationRead(id: string): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
   submitReport(input: ReportInput): Promise<ReportRecord>;
+  /** Admin-only: concern reports submitted by users. */
+  fetchReports(): Promise<ReportRecord[]>;
+  /** Admin-only: move a submitted report through the review workflow. */
+  setReportStatus(id: string, status: ReportStatus): Promise<ReportRecord>;
   resetDemo(): Promise<void>;
 }
 

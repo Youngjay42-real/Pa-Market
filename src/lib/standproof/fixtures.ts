@@ -51,7 +51,7 @@ export function createDemoSnapshot(): StandproofSnapshot {
   return {
     session: null, stands, applications: applicants,
     allocations: [{ id: "ALC-2026-0086", applicationId: "APP-2026-0412", vendorId: "VND-001", vendorName: "Mary Banda", standId: "ST-014", offeredAt: "2026-10-31T07:00:00.000Z", acceptedAt: "2026-10-31T07:40:00.000Z", status: "accepted" }],
-    payments: [{ id: "PAY-DEMO-0086", allocationId: "ALC-2026-0086", vendorId: "VND-001", amount: "3.00", currency: "USD", status: "not_eligible", createdAt: "2026-10-31T07:00:00.000Z" }],
+    payments: [{ id: "PAY-DEMO-0086", allocationId: "ALC-2026-0086", vendorId: "VND-001", amount: "3.00", currency: "ZMW", status: "not_eligible", createdAt: "2026-10-31T07:00:00.000Z" }],
     notifications: [
       { id: "NTF-001", vendorId: "VND-001", title: "Your stand is ready for handover", message: "You accepted stand A-14. Both you and an authorised official must confirm the physical handover before payment becomes eligible.", category: "handover", read: false, createdAt: "2026-10-31T07:40:00.000Z", href: "/vendor/dashboard" },
       { id: "NTF-002", vendorId: "VND-001", title: "A stand offer for you", message: "Stand A-14 in the Produce zone was offered after your application review.", category: "allocation", read: true, createdAt: "2026-10-31T07:00:00.000Z", href: "/vendor/dashboard" },

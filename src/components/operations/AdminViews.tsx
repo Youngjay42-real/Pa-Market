@@ -206,3 +206,29 @@ export function PaymentRegister() {
     <section className={styles.panel}><div className={styles.panelBody}><h2 className={styles.subheading}>Payment accountability</h2><p className={styles.sectionIntro}>An application approval does not authorise payment. Allocation acceptance, physical handover confirmations and backend eligibility checks must be completed first. Provider verification remains the source of truth for a transaction result.</p><Link href="/admin/verify" className={styles.link}>Review handover conditions <OpsIcon size={14} /></Link></div></section>
   </div></AdminGuard>;
 }
+
+export function ReportsRegister() {
+  const { snapshot, loading, setReportStatus } = useStandproof();
+  const toast = useToast();
+  const [status, setStatus] = useState("all");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const rows = snapshot.reports.filter(report => (status === "all" || report.status === status) && `${report.reference || report.id} ${report.category} ${report.location || ""} ${report.contactEmail || ""}`.toLowerCase().includes(search.toLowerCase()));
+  const move = async (reportId: string, next: "under_review" | "resolved" | "dismissed") => {
+    if (busyId) return;
+    setBusyId(reportId); setError("");
+    try {
+      await setReportStatus(reportId, next);
+      toast(`Report marked ${next.replace("_", " ")}. The change is recorded in the audit trail.`);
+    } catch (caught) { setError(messageOf(caught)); }
+    finally { setBusyId(null); }
+  };
+  return <AdminGuard loading={loading} role={snapshot.session?.role}><div className={styles.stack}>
+    <PageHeading title="Concern reports" description="Reports submitted by market users through the accountability channel." />
+    <div className={styles.notice}><OpsIcon name="shield" /><p>Submitted through the anonymous reporting channel: users are identified only by a reference. Report bodies are confidential — review them only for council follow-up, and never paste them into public channels.</p></div>
+    {error && <p className={styles.error} role="alert">{error}</p>}
+    <section className={styles.panel}><header className={styles.panelTitle}><div><h2>Submitted reports</h2><p>Anonymous submission · reference-tracked review workflow</p></div><span className={styles.ref}>{rows.length} report{rows.length === 1 ? "" : "s"}</span></header><div className={styles.toolbar}><Search value={search} onChange={value => { setSearch(value); }} placeholder="Search reference, category or location…" /><select aria-label="Filter report status" className={styles.select} value={status} onChange={event => setStatus(event.target.value)}><option value="all">All statuses</option><option value="received">Newly received</option><option value="under_review">Under review</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option></select></div><div className={styles.tableScroll}><table className={styles.table}><thead><tr><th>Reference</th><th>Category</th><th>Location</th><th>Status</th><th>Submitted</th><th aria-label="Actions" /></tr></thead><tbody>{rows.map(report => <Fragment key={report.id}><tr><td className={styles.mono}>{report.reference || report.id}</td><td><strong>{report.category}</strong><small>{report.contactEmail || "No contact details"}</small></td><td>{report.location || "—"}</td><td><Badge status={report.status} /></td><td><div className={styles.dateCell}>{date(report.createdAt)}<span>{time(report.createdAt)} CAT</span></div></td><td><button className={styles.action} aria-expanded={expanded === report.id} onClick={() => setExpanded(expanded === report.id ? null : report.id)}>{expanded === report.id ? "Hide" : "Review"} <OpsIcon name="chevron" size={12} /></button></td></tr>{expanded === report.id && <tr><td colSpan={6} className={styles.auditDetail}><strong>What was reported:</strong><br />{report.description || "The report body is not recoverable from a reference alone."}<div className={styles.inlineConditions} style={{ marginTop: 10 }}>{report.status === "received" && <button className={`${styles.secondary} ${styles.smallButton}`} disabled={busyId === report.id} onClick={() => move(report.id, "under_review")}>{busyId === report.id ? "Updating…" : "Start review"}</button>}{report.status === "under_review" && <><button className={`${styles.primary} ${styles.smallButton}`} disabled={busyId === report.id} onClick={() => move(report.id, "resolved")}>{busyId === report.id ? "Updating…" : "Mark resolved"}</button><button className={`${styles.secondary} ${styles.smallButton}`} disabled={busyId === report.id} onClick={() => move(report.id, "dismissed")}>Dismiss</button></>}{(report.status === "resolved" || report.status === "dismissed") && <button className={`${styles.secondary} ${styles.smallButton}`} disabled={busyId === report.id} onClick={() => move(report.id, "under_review")}>Reopen review</button>}</div></td></tr>}</Fragment>)}</tbody></table></div>{!rows.length && <Empty title="No concern reports" description="Reports submitted through the anonymous channel appear here with their reference." />}</section>
+  </div></AdminGuard>;
+}

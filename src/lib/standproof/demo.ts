@@ -1,4 +1,4 @@
-import type { Allocation, ApplicationInput, AuditEvent, DemoSession, NotificationRecord, PaymentRecord, ReportInput, ReportRecord, StandApplication, StandproofSnapshot, UserRole } from "@/types/standproof";
+import type { Allocation, ApplicationInput, AuditEvent, DemoSession, NotificationRecord, PaymentRecord, ReportInput, ReportRecord, ReportStatus, StandApplication, StandproofSnapshot, UserRole } from "@/types/standproof";
 import { createDemoSnapshot, DEMO_ADMIN, DEMO_VENDOR, ZONES } from "./fixtures";
 
 const DATA_KEY = "standproof-demo-v1";
@@ -154,7 +154,7 @@ export const demoActions = {
     if (current.allocations.some((entry) => entry.applicationId === item.id)) throw new Error("This application already has a stand offer.");
     if (stand.zone !== item.preferredZone) throw new Error("Choose an available stand in the application's preferred zone.");
     const value: Allocation = { id: id("ALC-DEMO"), applicationId: item.id, vendorId: item.vendorId, vendorName: item.vendorName, standId, offeredAt: now(), status: "offered" };
-    const payment: PaymentRecord = { id: id("PAY-DEMO"), allocationId: value.id, vendorId: item.vendorId, amount: "3.00", currency: "USD", status: "not_eligible", createdAt: now() };
+    const payment: PaymentRecord = { id: id("PAY-DEMO"), allocationId: value.id, vendorId: item.vendorId, amount: "3.00", currency: "ZMW", status: "not_eligible", createdAt: now() };
     commit({ ...current, stands: current.stands.map((entry) => entry.id === standId ? { ...entry, status: "reserved", vendorId: item.vendorId, vendorName: item.vendorName } : entry), applications: current.applications.map((entry) => entry.id === item.id ? { ...entry, status: "allocated" } : entry), allocations: [value, ...current.allocations], payments: [payment, ...current.payments], notifications: [notification(item.vendorId, "A stand offer for you", `Your demonstration offer for stand ${stand.label} is ready to review.`, "allocation"), ...current.notifications], audit: appendAudit("Stand offered", "allocation", value.id, `${stand.label} offered to ${item.vendorName} after administrator review.`) });
     return value;
   },
@@ -206,6 +206,16 @@ export const demoActions = {
     const value: ReportRecord = { ...input, category: input.category.trim(), description: input.description.trim(), location: input.location?.trim(), contactEmail: input.contactEmail?.trim(), id: id("RPT-DEMO"), status: "received", createdAt: now() };
     commit({ ...current, reports: [value, ...current.reports], audit: appendAudit("Demo report recorded", "report", value.id, "A fictional report was saved in this browser only. No external authority was notified.") });
     return value;
+  },
+  async fetchReports() {
+    return [...current.reports];
+  },
+  async setReportStatus(reportId: string, status: ReportStatus) {
+    const existing = current.reports.find((entry) => entry.id === reportId);
+    if (!existing) throw new Error("This demonstration report is not in the workspace (references from a reload only survive as numbers).");
+    const updated: ReportRecord = { ...existing, status };
+    commit({ ...current, reports: current.reports.map((entry) => entry.id === reportId ? updated : entry), audit: appendAudit("Report status changed", "report", reportId, `SAMPLE: demo report status set to ${status}.`) });
+    return updated;
   },
   async resetDemo() {
     vendorProfile = { ...DEMO_VENDOR };

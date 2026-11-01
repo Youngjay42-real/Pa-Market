@@ -87,11 +87,13 @@ export const initiatePayment = wrap("initiatePayment");
 export const markNotificationRead = wrap("markNotificationRead");
 export const markAllNotificationsRead = wrap("markAllNotificationsRead");
 export const submitReport = wrap("submitReport");
+export const fetchReports = wrap("fetchReports");
+export const setReportStatus = wrap("setReportStatus");
 export const resetDemo = wrap("resetDemo");
 export { refresh as refreshStandproof };
 export function getSnapshot() { return state.snapshot; }
 
-const actions: StandproofActions = { selectPersona, createDemoVendor, logout, submitApplication, reviewApplication, allocate, acceptOffer, confirmHandover, initiatePayment, markNotificationRead, markAllNotificationsRead, submitReport, resetDemo };
+const actions: StandproofActions = { selectPersona, createDemoVendor, logout, submitApplication, reviewApplication, allocate, acceptOffer, confirmHandover, initiatePayment, markNotificationRead, markAllNotificationsRead, submitReport, fetchReports, setReportStatus, resetDemo };
 
 export function useStandproof() {
   const value = useSyncExternalStore(subscribe, getState, getServerState);
