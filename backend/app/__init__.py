@@ -22,7 +22,9 @@ def create_app(config_name: str | None = None) -> Flask:
     from .models import Base  # noqa: F401  (import registers all tables)
     from .utils.seed import register_seed_command
     from .utils.admin_bootstrap import provision_admin_from_env
+    from .utils.market_grid import ensure_market_grid
     register_seed_command(app)
+    ensure_market_grid(app)
     provision_admin_from_env(app)
 
     @app.get("/healthz")

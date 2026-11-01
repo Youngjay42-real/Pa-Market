@@ -69,12 +69,17 @@ def _ensure_vendor(phone: str, password: str) -> None:
 def _ensure_stands() -> None:
     if db.session.query(Stand).count() > 0:
         return
+    from .market_grid import fee_for_row, GRID_COLS, GRID_ROWS, zone_for_col
+
     index = 0
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    for row in range(8):
-        for col in range(12):
+    from flask import current_app
+
+    cap = current_app.config["PAYMENT_MAX_PER_TRANSACTION"]
+    for row in range(GRID_ROWS):
+        for col in range(GRID_COLS):
             index += 1
-            roll = (row * 12 + col) % 10
+            roll = (row * GRID_COLS + col) % 10
             status = (
                 StandStatus.OCCUPIED if roll < 4
                 else StandStatus.RESERVED if roll == 4
@@ -87,14 +92,15 @@ def _ensure_stands() -> None:
                     code=f"ST-{index:03d}",
                     row=row,
                     col=col,
-                    zone=_zone_for_col(col),
+                    zone=zone_for_col(col, MARKET_ZONES),
                     status=status.value,
                     vendor_name=f"Vendor {index}" if occupied else None,
                     vendor_nrc=f"123456/{index:02d}/1" if occupied else None,
                     allocated_at=week_ago if occupied else None,
+                    fee_amount=fee_for_row(row, cap),
                 )
             )
-    click.echo("stand grid 8x12 created")
+    click.echo("stand grid 8x12 created (front-row pricing)")
 
 
 def register_seed_command(app) -> None:
