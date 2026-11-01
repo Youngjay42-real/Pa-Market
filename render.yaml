@@ -48,12 +48,6 @@ services:
         value: "5.00"
       - key: ALLOW_DEMO_SEED
         value: "false"
-      # Official council admin (contract: provisioned server-side only).
-      # Set ADMIN_PASSWORD in the dashboard — never commit it.
-      - key: ADMIN_PHONE
-        value: "0776596009"
-      - key: ADMIN_PASSWORD
-        sync: false
       # Set this private secret in the Render dashboard before deploying.
       # The backend provisions the initial admin without demo market data.
       - key: ADMIN_BOOTSTRAP_PHONE

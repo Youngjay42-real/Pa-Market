@@ -404,9 +404,9 @@ export function createFlaskAdapter() {
     vendorId: string,
   ): Promise<void> {
     const candidates = allocations
-      .filter(a => a.vendorId === vendorId && a.status !== "verified")
+      .filter(a => a.vendorId === vendorId)
       .slice(0, 2);
-    await Promise.allSettled(
+    await Promise.all(
       candidates.map(async allocation => {
         const verdict = await api.request<{ eligible?: boolean; reasons?: string[] }>(
           `/allocations/${encodeURIComponent(allocation.id)}/eligibility`,
@@ -686,15 +686,10 @@ export function createFlaskAdapter() {
     initiatePayment: async (allocationId: string) => {
       const context = await loadContext();
       if (!context) throw new Error("Sign in to view your payment.");
-      // Idempotency: one stable key per allocation during this browser session,
-      // matching the backend's replay rule (same key ⇒ same payment).
+      // Reuse a key only when retrying a request with an unknown outcome.
       let key = paymentIdempotencyKeys.get(allocationId);
       if (!key || !/^[A-Za-z0-9_-]{6,64}$/.test(key)) {
-        const seed = `${allocationId}`.replace(/[^A-Za-z0-9_-]/g, "");
-        key = `pay-${seed || crypto.randomUUID()}`
-          .slice(0, 60)
-          .replace(/^-+/, "p");
-        if (key.length < 6) key = `${key}receipt`;
+        key = `pay-${crypto.randomUUID()}`;
         paymentIdempotencyKeys.set(allocationId, key);
       }
       const wire = await api.request<WirePayments["payments"][number]>("/payments/initiate", {
@@ -702,6 +697,7 @@ export function createFlaskAdapter() {
         headers: { "Idempotency-Key": key },
         body: JSON.stringify({ allocation_id: allocationId }),
       });
+      paymentIdempotencyKeys.delete(allocationId);
       // The truth is the backend's provider verification, never the click.
       return paymentRecord(wire, context.vendorId);
     },

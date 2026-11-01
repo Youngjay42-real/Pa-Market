@@ -30,13 +30,10 @@ const date = (value: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit
 const time = (value: string) => new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lusaka" }).format(new Date(value));
 const messageOf = (error: unknown) => error instanceof Error ? error.message : "Unable to complete this demo action. Please try again.";
 
-function AdminGuard({ children, loading, role }: { children: ReactNode; loading: boolean; role?: string }) {
+function AdminGuard({ children, loading, role, error, onRetry }: { children: ReactNode; loading: boolean; role?: string; error?: string | null; onRetry?: () => void }) {
   if (loading) return <div className={styles.skeleton} aria-label="Loading workspace" role="status" />;
   if (role !== "admin") {
-    if (typeof window !== "undefined") {
-      window.location.href = "/login?role=admin";
-    }
-    return <section className={`${styles.panel} ${styles.access}`}><OpsIcon name="shield" size={30} /><h2>Administrator workspace</h2><p>Redirecting to administrator sign in…</p></section>;
+    return <section className={`${styles.panel} ${styles.access}`}><OpsIcon name="shield" size={30} /><h2>Administrator workspace</h2><p>{error ? `Could not load your administrator session: ${error}` : "Sign in with an administrator account to view this workspace."}</p>{error && onRetry && <button className={styles.secondary} onClick={onRetry}>Retry connection</button>}<Link href="/login?role=admin" className={styles.primary}>Administrator sign in <OpsIcon size={15} /></Link></section>;
   }
   return <>{children}</>;
 }
@@ -65,7 +62,7 @@ function downloadCsv(name: string, rows: string[][]) {
 }
 
 export function AdminOverview() {
-  const { snapshot, loading } = useStandproof();
+  const { snapshot, loading, error, refresh } = useStandproof();
   const { stands, applications, allocations, audit, payments } = snapshot;
   const occupied = stands.filter(stand => stand.status === "occupied").length;
   const available = stands.filter(stand => stand.status === "available").length;
@@ -76,7 +73,7 @@ export function AdminOverview() {
   const circumference = 2 * Math.PI * 70;
   const groups = [{ label: "Occupied", value: occupied, color: "#087f70" }, { label: "Available", value: available, color: "#a8d6c2" }, { label: "Other statuses", value: other, color: "#dfe7e7" }];
   let offset = 0;
-  return <AdminGuard loading={loading} role={snapshot.session?.role}><div className={styles.stack}>
+  return <AdminGuard loading={loading} role={snapshot.session?.role} error={error} onRetry={() => { void refresh(); }}><div className={styles.stack}>
     <PageHeading title="Market overview" description="A clear view of your market. A record behind every decision."><Link className={styles.secondary} href="/map"><OpsIcon name="grid" size={15} /> View market map</Link><Link href="/admin/applications" className={styles.primary}>Review applications <OpsIcon size={15} /></Link></PageHeading>
     <div className={styles.metrics}>
       {[{ label: "Total stands", value: stands.length, note: "Across four market zones" }, { label: "Occupied stands", value: occupied, note: `${occupancy}% market occupancy` }, { label: "Available stands", value: available, note: "Ready for allocation review" }, { label: "Pending applications", value: pending, note: "Awaiting your review" }].map(metric => <div key={metric.label} className={styles.metric}><span className={styles.metricLabel}>{metric.label}</span><strong className={styles.metricValue}>{metric.value}</strong><span className={styles.metricNote}>{metric.note}</span></div>)}

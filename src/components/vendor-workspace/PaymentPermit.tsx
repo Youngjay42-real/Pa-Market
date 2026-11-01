@@ -17,7 +17,155 @@ export function PaymentScreen() {
   async function refresh() { setBusy(true); try { await service.refresh(); setFeedback(service.mode === "demo" ? "The payment record has been refreshed. Demonstration payments stay pending; a browser action cannot confirm a payment." : "Payment status synced with the backend."); } finally { setBusy(false); } }
   function downloadReceipt() { if (payment?.status !== "successful" || !payment.receiptReference) return; const text = ["Pa Market · Payment record", `Reference: ${payment.receiptReference}`, `Provider reference: ${payment.providerReference ?? "Not returned"}`, `Vendor: ${snapshot.session?.fullName}`, `Stand: ${stand?.label ?? "—"}`, `Amount: ${money(payment.amount, payment.currency)}`, `Status: ${payment.status}`, `Created: ${date(payment.createdAt, true)}`, service.mode === "demo" ? "DEMONSTRATION RECORD — NOT A REAL RECEIPT" : "Backend payment record"].join("\n"); const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); const a = document.createElement("a"); a.href = url; a.download = `${payment.receiptReference}.txt`; a.click(); URL.revokeObjectURL(url); }
   const conditions = [ { title: "Stand allocated", met: Boolean(allocation), detail: allocation ? allocation.id : "An administrator must allocate a stand" }, { title: "Stand offer accepted", met: Boolean(allocation?.acceptedAt), detail: allocation?.acceptedAt ? date(allocation.acceptedAt) : "Awaiting vendor acceptance" }, { title: "Vendor handover confirmation", met: Boolean(allocation?.vendorConfirmedAt), detail: allocation?.vendorConfirmedAt ? date(allocation.vendorConfirmedAt) : "Confirm after receiving the stand" }, { title: "Authorised official confirmation", met: Boolean(allocation?.officialConfirmedAt), detail: allocation?.officialConfirmedAt ? date(allocation.officialConfirmedAt) : "Awaiting authorised official" } ];
-  return <div className={s.page}><Heading title="Payments & receipts" description="Payment follows allocation and confirmed handover. Every status has a record behind it."><Link href="/vendor/dashboard" className={s.secondary}>View my allocation</Link></Heading>{feedback && <div className={s.notice} role="status">{feedback}</div>}{actionError && <div className={s.error} role="alert">{actionError}</div>}<div className={s.grid}><Panel title="Payment conditions" description="These confirmations are required before a payment request.">{conditions.map(condition => <div key={condition.title} className={s.condition}><span className={`${s.conditionMark} ${condition.met ? s.conditionMet : ""}`} aria-label={condition.met ? "Complete" : "Pending"}>{condition.met ? "✓" : "○"}</span><div className={s.conditionText}>{condition.title}<div className={s.small} style={{ marginTop: 5 }}>{condition.detail}</div></div><span className={s.small}>{condition.met ? "Confirmed" : "Pending"}</span></div>)}{!allocation?.vendorConfirmedAt && allocation?.acceptedAt && <div className={s.actions} style={{ marginTop: 22 }}><Link href="/vendor/dashboard" className={s.secondary}>Review handover</Link></div>}</Panel><Panel title="Allocation payment" action={<Status value={payment?.status ?? "not_eligible"} />}><div className={s.small}>{stand ? `Stand ${stand.label} · ${stand.zone}` : "No stand allocated yet"}</div><div className={s.amount}>{payment ? <>{Number(payment.amount).toFixed(2)}<span>{payment.currency}</span></> : <span>Amount awaiting allocation</span>}</div><p className={s.small}>Demonstration allocation fee. Not a request to transfer money.</p><dl className={s.details} style={{ marginTop: 24 }}><Detail title="Payment reference">{payment?.id ?? "Not created"}</Detail><Detail title="Provider reference">{payment?.providerReference ?? "Not issued"}</Detail><Detail title="Receipt">{payment?.receiptReference ?? "Awaiting verified payment"}</Detail></dl><div className={s.paymentFoot}>{(() => { const canInitiate = payment?.status === "eligible" || (!payment && allocation?.eligible === true); if (canInitiate) { return <button className={s.button} onClick={initiate} disabled={busy}>{busy ? (service.mode === "demo" ? "Creating request…" : "Submitting payment…") : service.mode === "demo" ? "Create demo payment request" : "Submit payment"}</button>; } if (payment?.status === "pending") { return <button className={s.secondary} onClick={refresh} disabled={busy}>{busy ? "Refreshing…" : "Refresh payment status"}</button>; } if (payment?.status === "successful" && payment.receiptReference) { return <button className={s.button} onClick={downloadReceipt}>Download payment record</button>; } return <>{<button className={s.button} disabled>{payment?.status === "failed" ? "Payment failed — contact support" : payment?.status === "refunded" ? "Payment refunded" : "Awaiting confirmed conditions"}</button>}{allocation?.eligibilityReasons?.length ? <ul style={{ margin: "10px 0 0", paddingLeft: 18 }} className={s.small}>{allocation.eligibilityReasons.map(reason => <li key={reason}>{reason}</li>)}</ul> : null}</>; })()}<p className={s.small} style={{ margin: 0 }}>{service.mode === "demo" ? "DevDraft is not connected in this demo. No real payment is initiated. Payment success must come from the backend's verified provider result." : "Payment requests are verified with the provider by the backend before a receipt or permit is issued."}</p></div></Panel></div><section className={s.panel}><header className={s.panelHead}><div><h2>Transaction history</h2><p>Your own payment records, in one place.</p></div></header>{payments.length ? <div className={s.tableWrap}><table className={s.table}><thead><tr><th>REFERENCE</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th>PROVIDER REFERENCE</th></tr></thead><tbody>{payments.map(item => <tr key={item.id}><td className={s.number}>{item.id}</td><td>{date(item.createdAt)}</td><td>{money(item.amount, item.currency)}</td><td><Status value={item.status} /></td><td>{item.providerReference ?? "Not issued"}</td></tr>)}</tbody></table></div> : <div className={s.body}><p className={s.muted}>No transactions yet. A payment record will appear when a stand is allocated.</p></div>}</section><div className={s.notice}><strong>A clear separation between eligibility and payment.</strong><br />Completing the conditions makes a request eligible; it does not confirm that money has moved. The backend must verify the provider result before a digital receipt becomes available.</div></div>;
+  return (
+    <div className={s.page}>
+      <Heading
+        title="Payments & receipts"
+        description="Payment follows allocation and confirmed handover. Every status has a record behind it."
+      >
+        <Link href="/vendor/dashboard" className={s.secondary}>View my allocation</Link>
+      </Heading>
+      {feedback && <div className={s.notice} role="status">{feedback}</div>}
+      {actionError && <div className={s.error} role="alert">{actionError}</div>}
+      <div className={s.grid}>
+        <Panel title="Payment conditions" description="These confirmations are required before a payment request.">
+          {conditions.map(condition => (
+            <div key={condition.title} className={s.condition}>
+              <span
+                className={`${s.conditionMark} ${condition.met ? s.conditionMet : ""}`}
+                aria-label={condition.met ? "Complete" : "Pending"}
+              >
+                {condition.met ? "✓" : "○"}
+              </span>
+              <div className={s.conditionText}>
+                {condition.title}
+                <div className={s.small} style={{ marginTop: 5 }}>{condition.detail}</div>
+              </div>
+              <span className={s.small}>{condition.met ? "Confirmed" : "Pending"}</span>
+            </div>
+          ))}
+          {!allocation?.vendorConfirmedAt && allocation?.acceptedAt && (
+            <div className={s.actions} style={{ marginTop: 22 }}>
+              <Link href="/vendor/dashboard" className={s.secondary}>Review handover</Link>
+            </div>
+          )}
+        </Panel>
+        <Panel
+          title="Allocation payment"
+          action={<Status value={payment?.status ?? "not_eligible"} />}
+        >
+          <div className={s.small}>
+            {stand ? `Stand ${stand.label} · ${stand.zone}` : "No stand allocated yet"}
+          </div>
+          <div className={s.amount}>
+            {payment
+              ? <>{Number(payment.amount).toFixed(2)}<span>{payment.currency}</span></>
+              : <span>Amount awaiting allocation</span>}
+          </div>
+          <p className={s.small}>Demonstration allocation fee. Not a request to transfer money.</p>
+          <dl className={s.details} style={{ marginTop: 24 }}>
+            <Detail title="Payment reference">{payment?.id ?? "Not created"}</Detail>
+            <Detail title="Provider reference">{payment?.providerReference ?? "Not issued"}</Detail>
+            <Detail title="Receipt">{payment?.receiptReference ?? "Awaiting verified payment"}</Detail>
+          </dl>
+          <div className={s.paymentFoot}>
+            {(() => {
+              const canInitiate =
+                payment?.status === "eligible" ||
+                (!payment && allocation?.eligible === true) ||
+                (service.mode === "live" && payment?.status === "failed" && allocation?.eligible === true);
+              if (canInitiate) {
+                return (
+                  <button className={s.button} onClick={initiate} disabled={busy}>
+                    {busy
+                      ? (service.mode === "demo" ? "Creating request…" : "Submitting payment…")
+                      : service.mode === "demo"
+                        ? "Create demo payment request"
+                        : payment?.status === "failed"
+                          ? "Retry payment"
+                          : "Submit payment"}
+                  </button>
+                );
+              }
+              if (payment?.status === "pending") {
+                return (
+                  <button className={s.secondary} onClick={refresh} disabled={busy}>
+                    {busy ? "Refreshing…" : "Refresh payment status"}
+                  </button>
+                );
+              }
+              if (payment?.status === "successful" && payment.receiptReference) {
+                return <button className={s.button} onClick={downloadReceipt}>Download payment record</button>;
+              }
+              return (
+                <>
+                  <button className={s.button} disabled>
+                    {payment?.status === "failed"
+                      ? "Payment failed — conditions must be checked"
+                      : payment?.status === "refunded"
+                        ? "Payment refunded"
+                        : "Awaiting confirmed conditions"}
+                  </button>
+                  {allocation?.eligibilityReasons?.length ? (
+                    <ul style={{ margin: "10px 0 0", paddingLeft: 18 }} className={s.small}>
+                      {allocation.eligibilityReasons.map(reason => <li key={reason}>{reason}</li>)}
+                    </ul>
+                  ) : null}
+                </>
+              );
+            })()}
+            <p className={s.small} style={{ margin: 0 }}>
+              {service.mode === "demo"
+                ? "DevDraft is not connected in this demo. No real payment is initiated. Payment success must come from the backend's verified provider result."
+                : "Payment requests are verified with the provider by the backend before a receipt or permit is issued."}
+            </p>
+          </div>
+        </Panel>
+      </div>
+      <section className={s.panel}>
+        <header className={s.panelHead}>
+          <div>
+            <h2>Transaction history</h2>
+            <p>Your own payment records, in one place.</p>
+          </div>
+        </header>
+        {payments.length ? (
+          <div className={s.tableWrap}>
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  <th>REFERENCE</th>
+                  <th>DATE</th>
+                  <th>AMOUNT</th>
+                  <th>STATUS</th>
+                  <th>PROVIDER REFERENCE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map(item => (
+                  <tr key={item.id}>
+                    <td className={s.number}>{item.id}</td>
+                    <td>{date(item.createdAt)}</td>
+                    <td>{money(item.amount, item.currency)}</td>
+                    <td><Status value={item.status} /></td>
+                    <td>{item.providerReference ?? "Not issued"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={s.body}>
+            <p className={s.muted}>No transactions yet. A payment record will appear when a stand is allocated.</p>
+          </div>
+        )}
+      </section>
+      <div className={s.notice}>
+        <strong>A clear separation between eligibility and payment.</strong><br />
+        Completing the conditions makes a request eligible; it does not confirm that money has moved. The backend must verify the provider result before a digital receipt becomes available.
+      </div>
+    </div>
+  );
 }
 
 export function PermitScreen() {

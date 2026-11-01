@@ -25,6 +25,9 @@ rules drive both "can pay" checks and the actual payment run) returns
 
 Any reason being present → 409 `payment_not_eligible` with `details.reasons`.
 `GET /api/v1/allocations/{id}/eligibility` exposes the same verdict to the UI.
+The vendor UI requests this verdict for handover-confirmed allocations before
+enabling payment. If an eligibility request fails, the error is surfaced rather
+than treating the allocation as ineligible.
 
 ## 2. What the client is allowed to send
 
@@ -117,6 +120,9 @@ Receipt (with the full event trail incl. signature validity) at
 
 - `failed` (creation error or provider verdict): notification
   "No money moved — please try again", audit entry, no receipt.
+- The UI allows another request only after a fresh eligibility check succeeds.
+  A known failed attempt gets a new idempotency key; a retry after an unknown
+  network outcome reuses the original key.
 - Admin `POST /payments/{id}/refund` refunds via the documented test-payment
   refund endpoint (idempotency key `refund_{payment}_{rand}`), then sets the
   payment `refunded`, cancels the allocation, revokes the permit and frees the

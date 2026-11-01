@@ -83,6 +83,70 @@ async function verify() {
   await assert.rejects(createApiClient({ baseUrl: "https://example.test" }).request("//attacker.test/api/v1/stands"));
   global.fetch = async () => new Response(JSON.stringify({ message: "Permission denied" }), { status: 403, headers: { "Content-Type": "application/json" } });
   await assert.rejects(createApiClient({ baseUrl: "https://example.test" }).request("/api/v1/stands"), error => error.status === 403 && error.message === "Permission denied");
+  process.env.NEXT_PUBLIC_API_URL = "https://live-adapter.example.test";
+  window.localStorage.setItem("standproof.jwt", "live-test-token");
+  let eligibilityCalls = 0; let rejectEligibility = false; let paymentAttempts = 0; const idempotencyKeys = [];
+  global.fetch = async (url, init = {}) => {
+    const pathname = new URL(String(url)).pathname;
+    let payload;
+    if (pathname.endsWith("/auth/me")) {
+      payload = { id: "user-1", vendor_id: "vendor-1", full_name: "Live adapter test", phone: "+260977123456", role: "vendor", unread_notifications: 0 };
+    } else if (pathname.endsWith("/stands/meta")) {
+      payload = { zones: [], business_categories: [], category_zones: {} };
+    } else if (pathname.endsWith("/stands")) {
+      payload = { stands: [] };
+    } else if (pathname.endsWith("/applications/mine")) {
+      payload = { applications: [] };
+    } else if (pathname.endsWith("/allocations/mine")) {
+      payload = { allocations: [{
+        id: "allocation-1", application_id: "application-1", stand_id: "stand-1", vendor_id: "vendor-1",
+        status: "handover_confirmed", offered_at: "2026-01-01T00:00:00Z", accepted_at: "2026-01-02T00:00:00Z",
+        handover: {
+          vendor: { confirmed_at: "2026-01-03T00:00:00Z", meeting_location: null },
+          official: { confirmed_at: "2026-01-03T01:00:00Z", meeting_location: null },
+        },
+      }] };
+    } else if (pathname.endsWith("/payments/history")) {
+      payload = { payments: [] };
+    } else if (pathname.endsWith("/notifications")) {
+      payload = { notifications: [] };
+    } else if (pathname.endsWith("/audit-logs")) {
+      payload = { logs: [] };
+    } else if (pathname.endsWith("/allocations/allocation-1/eligibility")) {
+      eligibilityCalls += 1;
+      if (rejectEligibility) {
+        return new Response(JSON.stringify({ message: "Eligibility service unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } });
+      }
+      payload = { eligible: true, reasons: [] };
+    } else if (pathname.endsWith("/payments/initiate")) {
+      idempotencyKeys.push(new Headers(init.headers).get("Idempotency-Key"));
+      paymentAttempts += 1;
+      if (paymentAttempts === 2) throw new TypeError("fetch failed");
+      payload = {
+        id: `payment-${paymentAttempts}`, allocation_id: "allocation-1", vendor_id: "vendor-1",
+        amount: "100.00", currency: "ZMW", status: paymentAttempts === 1 ? "failed" : "pending",
+        provider_reference: null, receipt_no: null, created_at: "2026-01-03T02:00:00Z",
+      };
+    } else {
+      throw new Error(`Unexpected live adapter request: ${pathname}`);
+    }
+    return new Response(JSON.stringify(payload), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  const liveAdapter = sourceLoader()(path.join(__dirname, "flask.ts")).createFlaskAdapter().adapter;
+  const eligibleSnapshot = await liveAdapter.getSnapshot();
+  assert.equal(eligibilityCalls, 1, "verified handovers must request backend eligibility");
+  assert.equal(eligibleSnapshot.allocations[0].status, "verified");
+  assert.equal(eligibleSnapshot.allocations[0].eligible, true, "backend eligibility must reach the payment UI");
+  rejectEligibility = true;
+  await assert.rejects(liveAdapter.getSnapshot(), error => error.status === 503 && error.message === "Eligibility service unavailable");
+  rejectEligibility = false;
+  assert.equal((await liveAdapter.initiatePayment("allocation-1")).status, "failed");
+  const failedPaymentKey = idempotencyKeys[0];
+  await assert.rejects(liveAdapter.initiatePayment("allocation-1"));
+  const unknownOutcomeKey = idempotencyKeys[1];
+  assert.ok(unknownOutcomeKey && unknownOutcomeKey !== failedPaymentKey, "a known failed payment must use a fresh retry key");
+  assert.equal((await liveAdapter.initiatePayment("allocation-1")).status, "pending");
+  assert.equal(idempotencyKeys[2], unknownOutcomeKey, "an unknown request outcome must reuse its key on retry");
   process.env.NEXT_PUBLIC_API_URL = "https://configured.example.test"; delete process.env.NEXT_PUBLIC_DEMO_MODE;
   const live = sourceLoader()(path.join(__dirname, "index.ts")); await live.refreshStandproof();
   assert.equal(live.getSnapshot().stands.length, 0, "Configured-but-unconnected mode cannot fall back to demo");
@@ -101,7 +165,8 @@ async function verify() {
   assert.equal(live.getSnapshot().session, null); assert.equal(live.getSnapshot().applications.length, 0);
   adapter.getSnapshot = async () => liveSnapshot; await live.refreshStandproof(); await live.logout();
   assert.equal(live.getSnapshot().session, null); assert.equal(live.getSnapshot().payments.length, 0);
-  console.log("PASS: full vendor/admin application-to-handover workflow; ownership; duplicate prevention; pending-only payments; persistence/report-data minimisation; notifications/reset; API transport/errors; configured-mode isolation; stale-response protection; logout/session-expiry cache clearing.");
+  live.stopLivePolling();
+  console.log("PASS: full vendor/admin workflow; completed-handover payment eligibility; explicit eligibility errors; payment retry idempotency; ownership; duplicate prevention; persistence/report-data minimisation; notifications/reset; API transport; configured-mode isolation; stale-response protection; logout/session-expiry cache clearing.");
 }
 const originalFetch = global.fetch; const originalWindow = global.window;
 const originalApiUrl = process.env.NEXT_PUBLIC_API_URL; const originalDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE;

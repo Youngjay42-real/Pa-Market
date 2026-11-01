@@ -13,7 +13,7 @@ const EMPTY_SNAPSHOT: StandproofSnapshot = { session: null, stands: [], applicat
 const CONFIGURATION_ERROR = "The Flask API URL is configured, but its approved contract adapter is not connected. Live requests are disabled; no demo data is being presented as live data.";
 type ServiceState = { snapshot: StandproofSnapshot; loading: boolean; error: string | null; mode: ServiceMode };
 const initialMode: ServiceMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NEXT_PUBLIC_API_URL ? "demo" : "unconfigured";
-const SERVER_STATE: ServiceState = { snapshot: initialMode === "demo" ? createDemoSnapshot() : EMPTY_SNAPSHOT, mode: initialMode, loading: true, error: initialMode === "unconfigured" ? CONFIGURATION_ERROR : null };
+const SERVER_STATE: ServiceState = { snapshot: initialMode === "demo" ? createDemoSnapshot() : EMPTY_SNAPSHOT, mode: initialMode, loading: true, error: null };
 let state = SERVER_STATE;
 let liveAdapter: StandproofAdapter | null = null;
 let mounted = false;

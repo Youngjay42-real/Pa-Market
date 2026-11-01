@@ -21,13 +21,20 @@ export async function installFlaskAdapter(): Promise<StandproofAdapter | null> {
   if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") return null;
   if (!process.env.NEXT_PUBLIC_API_URL) return null;
   installed = true;
-  const { adapter } = createFlaskAdapter();
-  await configureStandproofAdapter(adapter);
-  return adapter;
+  try {
+    const { adapter } = createFlaskAdapter();
+    await configureStandproofAdapter(adapter);
+    return adapter;
+  } catch (error) {
+    installed = false;
+    throw error;
+  }
 }
 
 export function useStandproofInstaller() {
   useEffect(() => {
-    void installFlaskAdapter().catch(() => undefined);
+    void installFlaskAdapter().catch((error: unknown) => {
+      console.error("Unable to initialize the Pa Market live adapter.", error);
+    });
   }, []);
 }
