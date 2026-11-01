@@ -18,6 +18,7 @@ let state = SERVER_STATE;
 let liveAdapter: StandproofAdapter | null = null;
 let mounted = false;
 let refreshSequence = 0;
+let activeRefreshes = 0;
 const listeners = new Set<() => void>();
 function publish(next: ServiceState) { state = next; listeners.forEach((listener) => listener()); }
 export function subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }
@@ -36,7 +37,8 @@ async function refresh() {
     return;
   }
   if (!liveAdapter) { publish({ snapshot: EMPTY_SNAPSHOT, mode: "unconfigured", loading: false, error: CONFIGURATION_ERROR }); return; }
-  publish({ ...state, loading: true, error: null });
+  publish({ ...state, error: null });
+  activeRefreshes += 1;
   try {
     const snapshot = await liveAdapter.getSnapshot();
     if (sequence === refreshSequence) publish({ snapshot, mode: "live", loading: false, error: null });
@@ -44,6 +46,8 @@ async function refresh() {
   catch (error) {
     // Clear stale authorised records when the server cannot establish the current view.
     if (sequence === refreshSequence) publish({ snapshot: EMPTY_SNAPSHOT, mode: "live", loading: false, error: error instanceof Error ? error.message : "Unable to load your records." });
+  } finally {
+    activeRefreshes -= 1;
   }
 }
 
@@ -106,27 +110,52 @@ const actions: StandproofActions = { selectPersona, createDemoVendor, logout, su
  * its own updates synchronously).
  */
 let pollTimer: ReturnType<typeof setInterval> | null = null;
-const LIVE_POLL_INTERVAL_MS = 15_000;
+let visibilityListener: (() => void) | null = null;
+let focusListener: (() => void) | null = null;
+let onlineListener: (() => void) | null = null;
+const LIVE_POLL_INTERVAL_MS = 30_000;
 export function startLivePolling() {
   if (pollTimer) return;
-  const tick = () => { if (state.mode === "live") void refresh(); };
+  const tick = () => {
+    if (state.mode === "live" && activeRefreshes === 0 && document.visibilityState !== "hidden") {
+      void refresh();
+    }
+  };
   pollTimer = setInterval(tick, LIVE_POLL_INTERVAL_MS);
   if (typeof document !== "undefined") {
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+    visibilityListener = () => { if (!document.hidden) tick(); };
+    document.addEventListener("visibilitychange", visibilityListener);
   }
   if (typeof window !== "undefined") {
-    window.addEventListener("focus", tick);
-    window.addEventListener("online", tick);
+    focusListener = tick;
+    onlineListener = tick;
+    window.addEventListener("focus", focusListener);
+    window.addEventListener("online", onlineListener);
   }
 }
 export function stopLivePolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  if (visibilityListener && typeof document !== "undefined") {
+    document.removeEventListener("visibilitychange", visibilityListener);
+    visibilityListener = null;
+  }
+  if (focusListener && typeof window !== "undefined") {
+    window.removeEventListener("focus", focusListener);
+    focusListener = null;
+  }
+  if (onlineListener && typeof window !== "undefined") {
+    window.removeEventListener("online", onlineListener);
+    onlineListener = null;
+  }
 }
 
 export function useStandproof() {
   const value = useSyncExternalStore(subscribe, getState, getServerState);
   useEffect(() => {
-    if (!mounted) { mounted = true; void refresh().then(() => startLivePolling()); }
+    if (!mounted) {
+      mounted = true;
+      if (initialMode === "demo") void refresh();
+    }
   }, []);
   return { ...value, ...actions, refresh };
 }

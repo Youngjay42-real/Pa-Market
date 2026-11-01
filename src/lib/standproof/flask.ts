@@ -534,9 +534,10 @@ export function createFlaskAdapter() {
   } = {
     getSnapshot: async () => {
       const context = await loadContext();
-      await applyStandCategories();
-
-      const standsPayload = await api.request<WireStands>("/stands?limit=500");
+      const [standsPayload] = await Promise.all([
+        api.request<WireStands>("/stands?limit=500"),
+        applyStandCategories(),
+      ]);
       const stands = standsPayload.stands.map(standToView);
 
       const empty: Omit<StandproofSnapshot, "stands"> = {
@@ -552,7 +553,7 @@ export function createFlaskAdapter() {
 
       const isAdmin = context.user.role === "admin";
 
-      const [applicationsPayload, allocationsPayload, paymentsPayload, notificationsPayload, reportsPayload] =
+      const [applicationsPayload, allocationsPayload, paymentsPayload, notificationsPayload, reportsPayload, auditPayload] =
         await Promise.all([
           isAdmin
             ? api.request<WireApplications>("/applications")
@@ -568,14 +569,8 @@ export function createFlaskAdapter() {
             ? api.request<{ reports: WireReport[] }>("/reports")
             : Promise.resolve({ reports: [] })
           ).catch(() => ({ reports: [] as WireReport[] })),
+          api.request<WireAudit>("/audit-logs?limit=100").catch((): WireAudit => ({ logs: [] })),
         ]);
-
-      let auditPayload: WireAudit = { logs: [] };
-      try {
-        auditPayload = await api.request<WireAudit>("/audit-logs?limit=100");
-      } catch {
-        // Audit is advisory; the rest of the workspace still loads on failure.
-      }
 
       const applications = applicationsPayload.applications.map((item) =>
         applicationToView(item, context),

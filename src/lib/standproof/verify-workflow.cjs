@@ -18,7 +18,7 @@ function sourceLoader() {
   };
 }
 function storage() { const data = new Map(); return { getItem: key => data.get(key) || null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key), data }; }
-function browser() { return { localStorage: storage(), sessionStorage: storage(), addEventListener: () => {} }; }
+function browser() { return { localStorage: storage(), sessionStorage: storage(), addEventListener: () => {}, removeEventListener: () => {} }; }
 function deferred() { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; }
 async function verify() {
   global.window = browser();
@@ -85,8 +85,12 @@ async function verify() {
   await assert.rejects(createApiClient({ baseUrl: "https://example.test" }).request("/api/v1/stands"), error => error.status === 403 && error.message === "Permission denied");
   process.env.NEXT_PUBLIC_API_URL = "https://live-adapter.example.test";
   window.localStorage.setItem("standproof.jwt", "live-test-token");
-  let eligibilityCalls = 0; let rejectEligibility = false; let paymentAttempts = 0; const idempotencyKeys = [];
+  let eligibilityCalls = 0; let rejectEligibility = false; let paymentAttempts = 0; let activeRequests = 0; let maxActiveRequests = 0; const idempotencyKeys = [];
   global.fetch = async (url, init = {}) => {
+    activeRequests += 1;
+    maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    activeRequests -= 1;
     const pathname = new URL(String(url)).pathname;
     let payload;
     if (pathname.endsWith("/auth/me")) {
@@ -134,6 +138,7 @@ async function verify() {
   };
   const liveAdapter = sourceLoader()(path.join(__dirname, "flask.ts")).createFlaskAdapter().adapter;
   const eligibleSnapshot = await liveAdapter.getSnapshot();
+  assert.ok(maxActiveRequests > 1, "independent dashboard requests must run concurrently");
   assert.equal(eligibilityCalls, 1, "verified handovers must request backend eligibility");
   assert.equal(eligibleSnapshot.allocations[0].status, "verified");
   assert.equal(eligibleSnapshot.allocations[0].eligible, true, "backend eligibility must reach the payment UI");
