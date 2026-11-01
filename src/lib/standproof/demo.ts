@@ -217,6 +217,11 @@ export const demoActions = {
     commit({ ...current, reports: current.reports.map((entry) => entry.id === reportId ? updated : entry), audit: appendAudit("Report status changed", "report", reportId, `SAMPLE: demo report status set to ${status}.`) });
     return updated;
   },
+  async fetchPermitPdf(allocationId: string) {
+    const allocation = current.allocations.find((entry) => entry.id === allocationId);
+    if (!allocation || allocation.status !== "verified") throw new Error("No permit available for this allocation.");
+    return new Blob([`DEMO PERMIT for ${allocationId}`], { type: "application/pdf" });
+  },
   async resetDemo() {
     vendorProfile = { ...DEMO_VENDOR };
     const session = current.session ? { ...(current.session.role === "admin" ? DEMO_ADMIN : DEMO_VENDOR) } : null;

@@ -15,6 +15,20 @@ const vendorLinks=[['/vendor/dashboard','My overview','home'],['/map','Market ma
 export function ApplicationShell({children}:{children:React.ReactNode}){
  useStandproofInstaller();
  const path=usePathname();const router=useRouter();const {snapshot,mode,error,selectPersona,logout}=useStandproof();const toast=useToast();const [mobile,setMobile]=useState(false);const [profile,setProfile]=useState(false);const sidebarRef=useRef<HTMLElement>(null);
+
+  // Redirect if signed-in user's role doesn't match the route
+  useEffect(() => {
+    if (snapshot.session && mode === "live") {
+      const isAdminRoute = path.startsWith("/admin");
+      if (isAdminRoute && snapshot.session.role !== "admin") {
+        toast("This area requires an administrator account. Please sign in as admin.");
+        router.push("/login?role=admin");
+      } else if (!isAdminRoute && path.startsWith("/vendor") && snapshot.session.role !== "vendor") {
+        toast("This area requires a vendor account. Please sign in as a vendor.");
+        router.push("/login");
+      }
+    }
+  }, [snapshot.session, path, mode, router, toast]);
  useEffect(()=>{if(!mobile)return;const previous=document.activeElement as HTMLElement|null;const node=sidebarRef.current;const elements=()=>Array.from(node?.querySelectorAll<HTMLElement>('a[href],button:not([disabled])')||[]);elements()[0]?.focus();const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){setMobile(false);setProfile(false)}if(event.key==='Tab'){const options=elements();const first=options[0];const last=options[options.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}};const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.addEventListener('keydown',key);return()=>{document.body.style.overflow=oldOverflow;document.removeEventListener('keydown',key);previous?.focus()}},[mobile]);
  const publicPage=path==='/'||path==='/login'||path==='/vendor/register';
  const links=snapshot.session?.role==='vendor'&&!path.startsWith('/admin')?vendorLinks:adminLinks;

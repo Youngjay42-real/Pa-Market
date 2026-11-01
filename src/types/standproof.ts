@@ -63,6 +63,9 @@ export interface Allocation {
   officialConfirmedAt?: string;
   verifiedAt?: string;
   status: "offered" | "accepted" | "handover" | "verified" | "expired" | "cancelled";
+  /** Backend eligibility verdict for starting the payment (vendor view). */
+  eligible?: boolean;
+  eligibilityReasons?: string[];
 }
 
 export interface PaymentRecord {
@@ -143,6 +146,8 @@ export interface StandproofActions {
   fetchReports(): Promise<ReportRecord[]>;
   /** Admin-only: move a submitted report through the review workflow. */
   setReportStatus(id: string, status: ReportStatus): Promise<ReportRecord>;
+  /** Vendor: download the issued PDF permit for a completed allocation. */
+  fetchPermitPdf(allocationId: string): Promise<Blob>;
   resetDemo(): Promise<void>;
 }
 

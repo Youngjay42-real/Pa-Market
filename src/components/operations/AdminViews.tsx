@@ -32,7 +32,12 @@ const messageOf = (error: unknown) => error instanceof Error ? error.message : "
 
 function AdminGuard({ children, loading, role }: { children: ReactNode; loading: boolean; role?: string }) {
   if (loading) return <div className={styles.skeleton} aria-label="Loading workspace" role="status" />;
-  if (role !== "admin") return <section className={`${styles.panel} ${styles.access}`}><OpsIcon name="shield" size={30} /><h2>Administrator workspace</h2><p>Sign in through the administrator demonstration to review sample applications, record handovers and explore the audit trail.</p><Link href="/login?role=admin" className={styles.primary}>Open administrator sign in <OpsIcon size={15} /></Link><p>Production access must be authorised by the backend.</p></section>;
+  if (role !== "admin") {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login?role=admin";
+    }
+    return <section className={`${styles.panel} ${styles.access}`}><OpsIcon name="shield" size={30} /><h2>Administrator workspace</h2><p>Redirecting to administrator sign in…</p></section>;
+  }
   return <>{children}</>;
 }
 

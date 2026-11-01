@@ -398,6 +398,25 @@ export function createFlaskAdapter() {
     };
   }
 
+  /** Advisory: why is this allocation's payment blocked right now? */
+  async function attachEligibility(
+    allocations: Allocation[],
+    vendorId: string,
+  ): Promise<void> {
+    const candidates = allocations
+      .filter(a => a.vendorId === vendorId && a.status !== "verified")
+      .slice(0, 2);
+    await Promise.allSettled(
+      candidates.map(async allocation => {
+        const verdict = await api.request<{ eligible?: boolean; reasons?: string[] }>(
+          `/allocations/${encodeURIComponent(allocation.id)}/eligibility`,
+        );
+        allocation.eligible = Boolean(verdict.eligible);
+        allocation.eligibilityReasons = Array.isArray(verdict.reasons) ? verdict.reasons : [];
+      }),
+    );
+  }
+
   function notificationToView(
     wire: WireNotifications["notifications"][number],
     vendorId: string,
@@ -576,13 +595,17 @@ export function createFlaskAdapter() {
       );
 
       const session = sessionFromMe(context.user);
+      const allocations = allocationsPayload.allocations.map((item) =>
+        allocationToView(item, vendorNameMap, isAdmin ? undefined : context.fullName),
+      );
+      if (!isAdmin) {
+        await attachEligibility(allocations, context.vendorId);
+      }
       return {
         session,
         stands,
         applications,
-        allocations: allocationsPayload.allocations.map((item) =>
-          allocationToView(item, vendorNameMap, isAdmin ? undefined : context.fullName),
-        ),
+        allocations,
         payments,
         notifications: notificationsPayload.notifications.map((item) =>
           notificationToView(item, session.id),
@@ -745,6 +768,17 @@ export function createFlaskAdapter() {
         body: JSON.stringify({ status }),
       });
       return reportToView(wire);
+    },
+
+    fetchPermitPdf: async (allocationId: string) => {
+      const context = await loadContext();
+      if (!context) throw new Error("Sign in to access your permit.");
+      const payload = await api.request<ArrayBuffer>(
+        `/allocations/${encodeURIComponent(allocationId)}/permit.pdf`,
+        { headers: { Accept: "application/pdf" } },
+        { binary: true },
+      );
+      return new Blob([payload], { type: "application/pdf" });
     },
   } as StandproofAdapter & { logout: () => Promise<void> };
 

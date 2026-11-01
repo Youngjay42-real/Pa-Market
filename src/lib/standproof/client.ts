@@ -15,7 +15,7 @@ export interface ApiClientOptions {
 export function createApiClient(options: ApiClientOptions = {}) {
   const configured = (options.baseUrl ?? process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
   return {
-    async request<T>(contractPath: string, init: RequestInit = {}): Promise<T> {
+    async request<T>(contractPath: string, init: RequestInit = {}, opts: { binary?: boolean } = {}): Promise<T> {
       if (!configured) throw new ApiError("The Flask API URL has not been configured.", 0, "API_NOT_CONFIGURED");
       let base: URL;
       const sameOriginProxy = configured === "/api/v1";
@@ -46,12 +46,23 @@ export function createApiClient(options: ApiClientOptions = {}) {
       if (init.signal?.aborted) controller.abort();
       const timer = setTimeout(abort, options.timeoutMs ?? 15000);
       const headers = new Headers(init.headers);
-      headers.set("Accept", "application/json");
+      headers.set("Accept", opts.binary ? "application/pdf, application/json" : "application/json");
       if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
       const token = options.getAccessToken?.();
       if (token) headers.set("Authorization", `Bearer ${token}`);
       try {
         const response = await fetch(url, { ...init, headers, credentials: "include", signal: controller.signal });
+        if (opts.binary) {
+          if (!response.ok) {
+            let message = "The request could not be completed. Please try again.";
+            try {
+              const errorBody = await response.json() as { message?: string; error?: string };
+              message = typeof errorBody.message === "string" ? errorBody.message : typeof errorBody.error === "string" ? errorBody.error : message;
+            } catch { /* non-JSON error body */ }
+            throw new ApiError(message, response.status);
+          }
+          return await response.arrayBuffer() as T;
+        }
         const isJson = response.headers.get("content-type")?.includes("application/json");
         const body: unknown = response.status === 204 ? undefined : isJson ? await response.json() : undefined;
         if (!response.ok) {

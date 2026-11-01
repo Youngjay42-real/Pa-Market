@@ -51,6 +51,7 @@ async function refresh() {
 export async function configureStandproofAdapter(adapter: StandproofAdapter) {
   liveAdapter = adapter;
   publish({ snapshot: EMPTY_SNAPSHOT, mode: "live", loading: true, error: null });
+  startLivePolling();
   await refresh();
 }
 
@@ -89,16 +90,43 @@ export const markAllNotificationsRead = wrap("markAllNotificationsRead");
 export const submitReport = wrap("submitReport");
 export const fetchReports = wrap("fetchReports");
 export const setReportStatus = wrap("setReportStatus");
+export const fetchPermitPdf = wrap("fetchPermitPdf");
 export const resetDemo = wrap("resetDemo");
 export { refresh as refreshStandproof };
 export function getSnapshot() { return state.snapshot; }
 
-const actions: StandproofActions = { selectPersona, createDemoVendor, logout, submitApplication, reviewApplication, allocate, acceptOffer, confirmHandover, initiatePayment, markNotificationRead, markAllNotificationsRead, submitReport, fetchReports, setReportStatus, resetDemo };
+const actions: StandproofActions = { selectPersona, createDemoVendor, logout, submitApplication, reviewApplication, allocate, acceptOffer, confirmHandover, initiatePayment, markNotificationRead, markAllNotificationsRead, submitReport, fetchReports, setReportStatus, fetchPermitPdf, resetDemo };
+
+/**
+ * Live polling: records change from the other side of the workflow (a vendor
+ * accepting while an administrator works, an administrator approving while the
+ * vendor waits). One refresh per page load leaves both roles looking at stale
+ * data; a light interval + focus/online refresh keeps the workspace current
+ * without manual reloads. Ticks no-op in demo mode (the demo store publishes
+ * its own updates synchronously).
+ */
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+const LIVE_POLL_INTERVAL_MS = 15_000;
+export function startLivePolling() {
+  if (pollTimer) return;
+  const tick = () => { if (state.mode === "live") void refresh(); };
+  pollTimer = setInterval(tick, LIVE_POLL_INTERVAL_MS);
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+  }
+  if (typeof window !== "undefined") {
+    window.addEventListener("focus", tick);
+    window.addEventListener("online", tick);
+  }
+}
+export function stopLivePolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
 
 export function useStandproof() {
   const value = useSyncExternalStore(subscribe, getState, getServerState);
   useEffect(() => {
-    if (!mounted) { mounted = true; void refresh(); }
+    if (!mounted) { mounted = true; void refresh().then(() => startLivePolling()); }
   }, []);
   return { ...value, ...actions, refresh };
 }

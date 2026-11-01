@@ -1,5 +1,5 @@
 """Allocations: create, list, accept, handover confirmation + permit."""
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..constants import AllocationStatus, HandoverRole
 from ..errors import ApiError
@@ -196,3 +196,32 @@ def allocation_permit(allocation_id: str):
             "issued_at": allocation.completed_at.isoformat() if allocation.completed_at else None,
         }
     )
+
+
+@allocations_bp.get("/<allocation_id>/permit.pdf")
+@require_roles("admin", "vendor")
+def allocation_permit_pdf(allocation_id: str):
+    """Downloadable PDF permit — the same contract as /permit, as a document."""
+    allocation = _load_allocation(allocation_id)
+    if g.current_user.role != "admin" and allocation.vendor.user_id != g.current_user.id:
+        raise ApiError(403, "forbidden", "This allocation belongs to another vendor.")
+    if allocation.status != AllocationStatus.COMPLETED or not allocation.permit_code:
+        raise ApiError(409, "permit_unavailable",
+                       "The permit issues only after the stand levy payment is verified.")
+    from ..utils.permit_pdf import build_permit_pdf
+
+    pdf = build_permit_pdf(
+        permit_code=allocation.permit_code,
+        vendor_name=allocation.vendor.full_name,
+        vendor_nrc=allocation.vendor.nrc,
+        stand_code=allocation.stand.code,
+        zone=allocation.stand.zone,
+        fee_amount=f"{allocation.fee_amount:.2f}",
+        currency=allocation.currency,
+        issued_at=allocation.completed_at,
+    )
+    response = Response(pdf, mimetype="application/pdf")
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename=PaMarket-Permit-{allocation.permit_code}.pdf"
+    )
+    return response
