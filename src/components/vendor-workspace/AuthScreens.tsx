@@ -23,9 +23,21 @@ export function LoginScreen() {
     void (async () => {
       try {
         if (mode === "live") {
-          await flaskBundle().auth.login(phone, password);
+          const session = await flaskBundle().auth.login(phone, password);
+          if (role === "admin" && session.role !== "admin") {
+            await flaskBundle().auth.logout();
+            setError("This is a vendor account. Administrator sign-in is restricted to council accounts — use the Vendor tab.");
+            setBusy(false);
+            return;
+          }
+          if (role === "vendor" && session.role === "admin") {
+            await flaskBundle().auth.logout();
+            setError("This is an administrator account. Use the Administrator tab.");
+            setBusy(false);
+            return;
+          }
           await refreshStandproof();
-          router.push(role === "admin" ? "/admin" : "/vendor/dashboard");
+          router.push(session.role === "admin" ? "/admin" : "/vendor/dashboard");
           return;
         }
         setError("Sample workspace: use the clearly-labelled demo button below to explore. No account is required.");

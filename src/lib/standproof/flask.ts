@@ -276,7 +276,13 @@ interface SessionContext {
 }
 
 export function createFlaskAdapter() {
-  const api: Client = createApiClient({ getAccessToken: getAccessToken });
+  // Tolerant base: an env value without the /api/v1 suffix still lands on the
+  // approved namespace (the render dashboard sometimes stores the bare host).
+  const rawBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const normalizedBase = /^https?:\/\//i.test(rawBase.trim())
+    ? rawBase.trim().replace(/\/$/, "").replace(/\/api\/v1$/, "") + "/api/v1"
+    : rawBase;
+  const api: Client = createApiClient({ baseUrl: normalizedBase, getAccessToken: getAccessToken });
   const paymentIdempotencyKeys = new Map<string, string>();
   const localReports: ReportRecord[] = [];
   let cachedStandCategory: (zone: string) => string = () => "Market stand";
